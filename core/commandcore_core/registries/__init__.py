@@ -6,12 +6,20 @@ from .capability_registry import (
     CapabilityRegistry,
     DuplicateCapabilityIdError,
 )
+from .company_registry import (
+    CompanyNotFoundError,
+    CompanyRegistry,
+    DuplicateCompanyIdError,
+)
 
 __all__ = [
     "AgentNotFoundError",
     "AgentRegistry",
     "CapabilityNotFoundError",
     "CapabilityRegistry",
+    "CompanyNotFoundError",
+    "CompanyRegistry",
     "DuplicateAgentIdError",
     "DuplicateCapabilityIdError",
+    "DuplicateCompanyIdError",
 ]
