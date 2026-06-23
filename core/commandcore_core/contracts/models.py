@@ -142,6 +142,7 @@ class Agent(ContractModel):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     role: str = Field(min_length=1)
+    status: Status = Status.ACTIVE
     ownership: Ownership
     runtime_status: AgentRuntimeStatus
     permission_level: PermissionLevel
