@@ -11,6 +11,11 @@ from .company_registry import (
     CompanyRegistry,
     DuplicateCompanyIdError,
 )
+from .project_registry import (
+    DuplicateProjectIdError,
+    ProjectNotFoundError,
+    ProjectRegistry,
+)
 
 __all__ = [
     "AgentNotFoundError",
@@ -22,4 +27,7 @@ __all__ = [
     "DuplicateAgentIdError",
     "DuplicateCapabilityIdError",
     "DuplicateCompanyIdError",
+    "DuplicateProjectIdError",
+    "ProjectNotFoundError",
+    "ProjectRegistry",
 ]
