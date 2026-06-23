@@ -78,7 +78,9 @@ class Project(ContractModel):
     lifecycle_state: LifecycleState
     ownership: Ownership
     company_id: str | None = None
+    task_ids: list[str] = Field(default_factory=list)
     capability_ids: list[str] = Field(default_factory=list)
+    agent_ids: list[str] = Field(default_factory=list)
     mission: str | None = None
     outcome: str | None = None
     next_action_summary: str | None = None
