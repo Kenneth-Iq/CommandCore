@@ -8,3 +8,4 @@ services/core-data/
 docker/.env
 .env
 *.db
+core/.venv/
