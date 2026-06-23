@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+core/.venv/
+core/*.egg-info/
+services/odysseus/data/
+services/core-data/
+docker/.env
+.env
+*.db

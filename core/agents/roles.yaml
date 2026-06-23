@@ -1,0 +1,63 @@
+# Role roster — format frozen by PHASE-0-1.md §3; roster per PHASE-2.md §5.
+# Toolsets are Hermes enabled_toolsets; max_tier is the PRD permission
+# ceiling enforced by the approval gate (above-ceiling actions auto-deny).
+
+prime:
+  display_name: "Jarvis Prime — orchestrator, planner, commander's voice"
+  model: "${JARVIS_MODEL:-nvidia/llama-3.3-nemotron-super-49b-v1}"
+  base_url: "${JARVIS_LLM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+  api_key_env: NVIDIA_API_KEY
+  toolsets: [files, terminal, odysseus]
+  max_tier: 3
+  system_prompt_file: prompts/prime.md
+  max_iterations: 30
+
+researcher:
+  display_name: "Researcher — gathers and cites sources"
+  model: "${JARVIS_MODEL:-nvidia/llama-3.3-nemotron-super-49b-v1}"
+  base_url: "${JARVIS_LLM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+  api_key_env: NVIDIA_API_KEY
+  toolsets: [web, files, odysseus]
+  max_tier: 1
+  system_prompt_file: prompts/researcher.md
+  max_iterations: 25
+
+writer:
+  display_name: "Writer — drafts reports, emails, posts (never sends)"
+  model: "${JARVIS_MODEL:-nvidia/llama-3.3-nemotron-super-49b-v1}"
+  base_url: "${JARVIS_LLM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+  api_key_env: NVIDIA_API_KEY
+  toolsets: [files]
+  max_tier: 1
+  system_prompt_file: prompts/writer.md
+  max_iterations: 20
+
+analyst:
+  display_name: "Analyst — computation and data work in the sandbox"
+  model: "${JARVIS_MODEL:-nvidia/llama-3.3-nemotron-super-49b-v1}"
+  base_url: "${JARVIS_LLM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+  api_key_env: NVIDIA_API_KEY
+  toolsets: [files, terminal, odysseus]
+  max_tier: 1
+  system_prompt_file: prompts/analyst.md
+  max_iterations: 25
+
+operator:
+  display_name: "Operator — the only fleet role allowed send/destructive actions"
+  model: "${JARVIS_MODEL:-nvidia/llama-3.3-nemotron-super-49b-v1}"
+  base_url: "${JARVIS_LLM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+  api_key_env: NVIDIA_API_KEY
+  toolsets: [files, terminal, odysseus]
+  max_tier: 3
+  system_prompt_file: prompts/operator.md
+  max_iterations: 20
+
+sentinel:
+  display_name: "Sentinel — scheduled watches via the Phase 3 cron scheduler"
+  model: "${JARVIS_MODEL:-nvidia/llama-3.3-nemotron-super-49b-v1}"
+  base_url: "${JARVIS_LLM_BASE_URL:-https://integrate.api.nvidia.com/v1}"
+  api_key_env: NVIDIA_API_KEY
+  toolsets: [files, web]
+  max_tier: 1
+  system_prompt_file: prompts/sentinel.md
+  max_iterations: 15

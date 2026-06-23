@@ -1,0 +1,12 @@
+# Default Sentinel schedules — loaded once at startup (PHASE-3.md §2.6).
+# Entries are inserted only if no schedule with the same name already
+# exists, so commander edits made via the /schedules API survive restarts.
+
+- name: "Morning Briefing"
+  cron_expr: "0 7 * * *"
+  prompt: >
+    Give the commander a morning briefing: anything notable from
+    memory recalled for today, and a short outlook. Keep it to a
+    few sentences.
+  mode: mission
+  enabled: false

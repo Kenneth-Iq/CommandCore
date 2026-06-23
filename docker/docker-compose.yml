@@ -1,0 +1,130 @@
+# Jarvis platform stack — Core + Odysseus workspace services.
+# Odysseus services are adapted from C:\Projects\odysseus\docker-compose.yml
+# (build context points at the sibling checkout; data lives under
+# ..\services\). Odysseus is passive in Phase 1 — Core consumes its API
+# starting Phase 3 (see PHASE-0-1.md §4.5).
+
+name: jarvis
+
+services:
+  jarvis-core:
+    build:
+      context: ../core
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      - JARVIS_ENGINE=${JARVIS_ENGINE:-hermes}
+      - JARVIS_MODEL=${JARVIS_MODEL:-nvidia/llama-3.3-nemotron-super-49b-v1}
+      - JARVIS_LLM_BASE_URL=${JARVIS_LLM_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      - ODYSSEUS_BASE_URL=${ODYSSEUS_BASE_URL:-http://odysseus:7000}
+      - ODYSSEUS_API_TOKEN=${ODYSSEUS_API_TOKEN:-}
+      # Hermes web_search backend — points the Researcher's web toolset at the
+      # SearXNG service so the fleet does real research instead of guessing.
+      - SEARXNG_URL=${SEARXNG_URL:-http://searxng:8080}
+      - NTFY_BASE_URL=${NTFY_BASE_URL:-http://ntfy:80}
+      - NTFY_TOPIC=${NTFY_TOPIC:-jarvis}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ../services/core-data:/data
+    depends_on:
+      - odysseus
+      - ntfy
+      - searxng
+    restart: unless-stopped
+
+  odysseus:
+    build:
+      context: ../../odysseus
+    ports:
+      - "127.0.0.1:${ODYSSEUS_PORT:-7000}:7000"
+    volumes:
+      - ../services/odysseus/data:/app/data
+      - ../services/odysseus/logs:/app/logs
+      - ../services/odysseus/data/ssh:/app/.ssh
+      - ../services/odysseus/data/huggingface:/app/.cache/huggingface
+      - ../services/odysseus/data/local:/app/.local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - SEARXNG_INSTANCE=http://searxng:8080
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/app.db}
+      - AUTH_ENABLED=${AUTH_ENABLED:-true}
+      - ODYSSEUS_ADMIN_USER=${ODYSSEUS_ADMIN_USER:-admin}
+      - ODYSSEUS_ADMIN_PASSWORD=${ODYSSEUS_ADMIN_PASSWORD:-}
+      - FASTEMBED_MODEL=${FASTEMBED_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - ODYSSEUS_INPROCESS_POLLERS=1
+      - ODYSSEUS_INPROCESS_TASKS=1
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    depends_on:
+      searxng:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    restart: unless-stopped
+
+  chromadb:
+    image: docker.io/chromadb/chroma:latest
+    ports:
+      - "127.0.0.1:8100:8000"
+    volumes:
+      - chromadb-data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+
+  searxng:
+    # Pinned tag — upstream `latest` has shipped boot-broken images before
+    # (see note in the odysseus compose file).
+    image: docker.io/searxng/searxng:2026.5.31-7159b8aed
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        if [ ! -s /etc/searxng/settings.yml ] || grep -q 'odysseus-local-searxng-json-2026-05-30\|__SEARXNG_SECRET__' /etc/searxng/settings.yml; then
+          secret="$${SEARXNG_SECRET:-}"
+          if [ -z "$$secret" ]; then
+            secret="$$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          fi
+          sed "s|__SEARXNG_SECRET__|$$secret|g" /tmp/searxng-settings.yml.template > /etc/searxng/settings.yml
+        fi
+        exec /usr/local/searxng/entrypoint.sh
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - searxng-data:/etc/searxng
+      - ../../odysseus/config/searxng/settings.yml:/tmp/searxng-settings.yml.template:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-}
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID, DAC_OVERRIDE]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5).read(1)\""]
+      interval: 5s
+      timeout: 6s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  ntfy:
+    image: docker.io/binwiederhier/ntfy
+    command: serve
+    ports:
+      - "127.0.0.1:8091:80"
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+    environment:
+      - NTFY_BASE_URL=${NTFY_BASE_URL:-http://localhost:8091}
+    restart: unless-stopped
+
+volumes:
+  searxng-data:
+  chromadb-data:
+  ntfy-cache:

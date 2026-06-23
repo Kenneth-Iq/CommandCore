@@ -1,0 +1,31 @@
+{
+  "name": "jarvis",
+  "version": "0.1.0",
+  "description": "Voice-first AI agent for Windows",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.18.2",
+    "js-yaml": "^4.1.0",
+    "lucide-react": "^0.460.0",
+    "openai": "^4.77.0",
+    "sql.js": "^1.12.0",
+    "ssh2": "^1.17.0",
+    "uuid": "^14.0.0",
+    "ws": "^8.21.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.3.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

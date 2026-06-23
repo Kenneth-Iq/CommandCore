@@ -1,0 +1,8 @@
+node_modules/
+out/
+dist/
+.env
+*.db
+resources/piper/
+resources/piper-voices/
+resources/openwakeword/
