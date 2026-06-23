@@ -5,14 +5,14 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from commandcore_core.contracts import (
+from commandcore.contracts import (
     LifecycleState,
     Ownership,
     OwnershipKind,
     Project,
     Status,
 )
-from commandcore_core.registries.project_registry import (
+from commandcore.registries.project_registry import (
     DuplicateProjectIdError,
     ProjectNotFoundError,
     ProjectRegistry,

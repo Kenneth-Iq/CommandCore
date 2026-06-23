@@ -5,7 +5,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from commandcore_core.contracts import (
+from commandcore.contracts import (
     Agent,
     AgentRuntimeStatus,
     Ownership,
@@ -13,7 +13,7 @@ from commandcore_core.contracts import (
     PermissionLevel,
     Status,
 )
-from commandcore_core.registries.agent_registry import (
+from commandcore.registries.agent_registry import (
     AgentNotFoundError,
     AgentRegistry,
     DuplicateAgentIdError,

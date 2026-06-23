@@ -5,7 +5,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from commandcore_core.contracts import (
+from commandcore.contracts import (
     LifecycleState,
     Mission,
     MissionStatus,
@@ -15,7 +15,7 @@ from commandcore_core.contracts import (
     Status,
     Task,
 )
-from commandcore_core.mission import (
+from commandcore.mission import (
     DuplicateMissionIdError,
     MissionEngine,
     MissionNotFoundError,

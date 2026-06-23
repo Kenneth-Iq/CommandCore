@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from commandcore_core.contracts import Capability, CapabilityCertificationStatus, Status
+from commandcore.contracts import Capability, CapabilityCertificationStatus, Status
 
 
 class DuplicateCapabilityIdError(ValueError):

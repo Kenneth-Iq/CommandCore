@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from commandcore_core.contracts import Project, Status
+from commandcore.contracts import Project, Status
 
 
 class DuplicateProjectIdError(ValueError):

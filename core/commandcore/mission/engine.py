@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from commandcore_core.contracts import Mission, MissionStatus, Task
+from commandcore.contracts import Mission, MissionStatus, Task
 
 
 class DuplicateMissionIdError(ValueError):

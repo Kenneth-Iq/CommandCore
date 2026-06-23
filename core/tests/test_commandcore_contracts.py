@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from commandcore_core.contracts import (
+from commandcore.contracts import (
     Agent,
     AgentRuntimeStatus,
     Capability,
