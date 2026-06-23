@@ -212,6 +212,10 @@ class Workspace(ContractModel):
     status: Status
     ownership: Ownership
     member_references: list[str] = Field(default_factory=list)
+    company_ids: list[str] = Field(default_factory=list)
+    project_ids: list[str] = Field(default_factory=list)
+    agent_ids: list[str] = Field(default_factory=list)
+    capability_ids: list[str] = Field(default_factory=list)
     local_first: bool = True
     offline_capable: bool = True
     knowledge_boundary_summary: str | None = None

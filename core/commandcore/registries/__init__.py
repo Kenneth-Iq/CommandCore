@@ -16,6 +16,11 @@ from .project_registry import (
     ProjectNotFoundError,
     ProjectRegistry,
 )
+from .workspace_registry import (
+    DuplicateWorkspaceIdError,
+    WorkspaceNotFoundError,
+    WorkspaceRegistry,
+)
 
 __all__ = [
     "AgentNotFoundError",
@@ -28,6 +33,9 @@ __all__ = [
     "DuplicateCapabilityIdError",
     "DuplicateCompanyIdError",
     "DuplicateProjectIdError",
+    "DuplicateWorkspaceIdError",
     "ProjectNotFoundError",
     "ProjectRegistry",
+    "WorkspaceNotFoundError",
+    "WorkspaceRegistry",
 ]
