@@ -58,7 +58,9 @@ class Company(ContractModel):
     ownership: Ownership
     vision: str | None = None
     goals: list[str] = Field(default_factory=list)
+    project_ids: list[str] = Field(default_factory=list)
     capability_ids: list[str] = Field(default_factory=list)
+    agent_ids: list[str] = Field(default_factory=list)
     integration_ids: list[str] = Field(default_factory=list)
     operating_state: str | None = None
 
