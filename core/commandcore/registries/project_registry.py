@@ -38,6 +38,8 @@ class ProjectRegistry(BaseRegistry[Project]):
         DuplicateProjectIdError
     )
     not_found_error_cls: ClassVar[type[ProjectNotFoundError]] = ProjectNotFoundError
+    created_event_name: ClassVar[str] = "ProjectCreated"
+    default_event_source: ClassVar[str] = "commandcore.registries.project"
 
     @property
     def _projects(self) -> dict[str, Project]:

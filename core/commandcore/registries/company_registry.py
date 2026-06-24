@@ -38,6 +38,8 @@ class CompanyRegistry(BaseRegistry[Company]):
         DuplicateCompanyIdError
     )
     not_found_error_cls: ClassVar[type[CompanyNotFoundError]] = CompanyNotFoundError
+    created_event_name: ClassVar[str] = "CompanyCreated"
+    default_event_source: ClassVar[str] = "commandcore.registries.company"
 
     @property
     def _companies(self) -> dict[str, Company]:

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 from commandcore.contracts import Status
+from commandcore.events import Event, EventType, InMemoryEventBus
 
 EntityT = TypeVar("EntityT")
 
@@ -28,10 +29,14 @@ class BaseRegistry(Generic[EntityT]):
     """
 
     _entities: dict[str, EntityT] = field(default_factory=dict)
+    event_bus: InMemoryEventBus | None = None
+    source: str | None = None
 
     entity_label: ClassVar[str] = "Entity"
     duplicate_error_cls: ClassVar[type[DuplicateEntityError]] = DuplicateEntityError
     not_found_error_cls: ClassVar[type[EntityNotFoundError]] = EntityNotFoundError
+    created_event_name: ClassVar[str | None] = None
+    default_event_source: ClassVar[str] = "commandcore.framework.registry"
 
     def register(self, entity: EntityT) -> EntityT:
         """Register an entity by its canonical `id` field."""
@@ -43,6 +48,7 @@ class BaseRegistry(Generic[EntityT]):
             )
 
         self._entities[entity_id] = entity
+        self._publish_created_event(entity)
         return entity
 
     def get(self, entity_id: str) -> EntityT:
@@ -96,6 +102,37 @@ class BaseRegistry(Generic[EntityT]):
 
         self._entities[self._entity_id(entity)] = entity
         return entity
+
+    def _publish_created_event(self, entity: EntityT) -> None:
+        if self.event_bus is None or self.created_event_name is None:
+            return
+
+        payload = {
+            "event_name": self.created_event_name,
+            "entity_id": self._entity_id(entity),
+        }
+
+        name = getattr(entity, "name", None)
+        if name is not None:
+            payload["name"] = name
+
+        status = getattr(entity, "status", None)
+        if status is not None:
+            payload["status"] = status.value if hasattr(status, "value") else status
+
+        ownership = getattr(entity, "ownership", None)
+        if ownership is not None:
+            payload["ownership"] = (
+                ownership.model_dump() if hasattr(ownership, "model_dump") else ownership
+            )
+
+        self.event_bus.publish(
+            Event(
+                type=EventType.DOMAIN,
+                source=self.source or self.default_event_source,
+                payload=payload,
+            )
+        )
 
     @staticmethod
     def _entity_id(entity: EntityT) -> str:

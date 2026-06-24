@@ -40,6 +40,8 @@ class CapabilityRegistry(BaseRegistry[Capability]):
     not_found_error_cls: ClassVar[type[CapabilityNotFoundError]] = (
         CapabilityNotFoundError
     )
+    created_event_name: ClassVar[str] = "CapabilityRegistered"
+    default_event_source: ClassVar[str] = "commandcore.registries.capability"
 
     @property
     def _capabilities(self) -> dict[str, Capability]:

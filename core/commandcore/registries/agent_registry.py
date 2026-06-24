@@ -38,6 +38,8 @@ class AgentRegistry(BaseRegistry[Agent]):
         DuplicateAgentIdError
     )
     not_found_error_cls: ClassVar[type[AgentNotFoundError]] = AgentNotFoundError
+    created_event_name: ClassVar[str] = "AgentRegistered"
+    default_event_source: ClassVar[str] = "commandcore.registries.agent"
 
     @property
     def _agents(self) -> dict[str, Agent]:

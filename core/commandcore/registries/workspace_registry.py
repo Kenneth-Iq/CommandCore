@@ -40,6 +40,8 @@ class WorkspaceRegistry(BaseRegistry[Workspace]):
     not_found_error_cls: ClassVar[type[WorkspaceNotFoundError]] = (
         WorkspaceNotFoundError
     )
+    created_event_name: ClassVar[str] = "WorkspaceCreated"
+    default_event_source: ClassVar[str] = "commandcore.registries.workspace"
 
     @property
     def _workspaces(self) -> dict[str, Workspace]:
