@@ -3,6 +3,7 @@
 from .models import ApprovalRequest, Decision, Directive, MissionRequest, Objective
 from .orchestrator import ExecutiveMissionOrchestrator
 from .runtime import ExecutiveRuntime
+from .state import ExecutiveOutcomeRecord, ExecutiveStateStore
 
 __all__ = [
     "ApprovalRequest",
@@ -11,5 +12,7 @@ __all__ = [
     "MissionRequest",
     "Objective",
     "ExecutiveMissionOrchestrator",
+    "ExecutiveOutcomeRecord",
     "ExecutiveRuntime",
+    "ExecutiveStateStore",
 ]
