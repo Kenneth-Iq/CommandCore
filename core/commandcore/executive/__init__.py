@@ -1,6 +1,13 @@
 """In-memory executive runtime primitives for CommandCore."""
 
-from .models import ApprovalRequest, Decision, Directive, MissionRequest, Objective
+from .models import (
+    ApprovalRequest,
+    Decision,
+    Directive,
+    ExecutiveOrchestrationResult,
+    MissionRequest,
+    Objective,
+)
 from .orchestrator import ExecutiveMissionOrchestrator
 from .policy_gate import ExecutivePolicyGate, PolicyGateResult
 from .policies import ExecutivePolicyEngine, PolicyDecision, PolicyEvaluationResult, PolicyRule
@@ -11,6 +18,7 @@ __all__ = [
     "ApprovalRequest",
     "Decision",
     "Directive",
+    "ExecutiveOrchestrationResult",
     "MissionRequest",
     "Objective",
     "ExecutiveMissionOrchestrator",

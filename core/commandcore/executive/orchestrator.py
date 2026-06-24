@@ -8,8 +8,10 @@ from commandcore.contracts import Mission, MissionStatus, Ownership, OwnershipKi
 from commandcore.events import Event, EventType, InMemoryEventBus
 from commandcore.mission import MissionEngine
 
-from .models import MissionRequest, Objective
+from .models import ExecutiveOrchestrationResult, MissionRequest, Objective
+from .policy_gate import ExecutivePolicyGate
 from .runtime import ExecutiveRuntime
+from .state import ExecutiveStateStore
 
 
 @dataclass(slots=True)
@@ -18,11 +20,14 @@ class ExecutiveMissionOrchestrator:
 
     executive_runtime: ExecutiveRuntime
     mission_engine: MissionEngine
+    policy_gate: ExecutivePolicyGate | None = None
+    state_store: ExecutiveStateStore | None = None
     event_bus: InMemoryEventBus | None = None
     source: str | None = None
     _objective_to_mission_request_id: dict[str, str] = field(default_factory=dict)
     _objective_to_mission_id: dict[str, str] = field(default_factory=dict)
     _last_seen_mission_status: dict[str, MissionStatus] = field(default_factory=dict)
+    _recorded_outcomes: set[str] = field(default_factory=set)
 
     default_event_source: str = "commandcore.executive.orchestrator"
 
@@ -30,10 +35,23 @@ class ExecutiveMissionOrchestrator:
         if self.event_bus is None:
             self.event_bus = self.executive_runtime.event_bus or self.mission_engine.event_bus
 
-    def submit_objective(self, objective: Objective) -> Mission:
+    def submit_objective(self, objective: Objective) -> ExecutiveOrchestrationResult:
         """Accept an objective, create a mission request, and create a mission."""
 
+        warnings: list[str] = []
+        if self.policy_gate is not None:
+            gate_result = self.policy_gate.check_objective(objective)
+            warnings = list(gate_result.evaluation.messages)
+            if gate_result.status == "blocked":
+                return ExecutiveOrchestrationResult(
+                    objective_id=objective.id,
+                    status=gate_result.status,
+                    warnings=warnings,
+                )
+
         self.executive_runtime.submit_objective(objective)
+        if self.state_store is not None:
+            self.state_store.record_objective(objective)
         self._publish(
             name="ExecutiveObjectiveAccepted",
             payload={
@@ -52,6 +70,8 @@ class ExecutiveMissionOrchestrator:
         mission = self.mission_engine.create_mission(self._mission_from_request(mission_request))
         self._objective_to_mission_id[objective.id] = mission.id
         self._last_seen_mission_status[objective.id] = mission.status
+        if self.state_store is not None:
+            self.state_store.record_mission(objective.id, mission.id)
         self._publish(
             name="ExecutiveMissionCreated",
             payload={
@@ -62,7 +82,13 @@ class ExecutiveMissionOrchestrator:
                 "status": self._status_value(mission.status),
             },
         )
-        return mission
+        return ExecutiveOrchestrationResult(
+            objective_id=objective.id,
+            status="allowed_with_warnings" if warnings else "allowed",
+            mission_id=mission.id,
+            mission_request_id=mission_request.id,
+            warnings=warnings,
+        )
 
     def convert_objective_into_mission_request(self, objective: Objective) -> MissionRequest:
         """Derive a deterministic mission request from an executive objective."""
@@ -86,6 +112,11 @@ class ExecutiveMissionOrchestrator:
         if current_status != previous_status:
             self._last_seen_mission_status[objective_id] = current_status
             if current_status == MissionStatus.COMPLETED:
+                self._record_outcome_once(
+                    objective_id,
+                    self.mission_engine.get_result_summary(mission.id)
+                    or "Mission completed.",
+                )
                 self._publish(
                     name="ExecutiveMissionCompleted",
                     payload={
@@ -95,6 +126,11 @@ class ExecutiveMissionOrchestrator:
                     },
                 )
             elif current_status == MissionStatus.FAILED:
+                self._record_outcome_once(
+                    objective_id,
+                    self.mission_engine.get_failure_reason(mission.id)
+                    or "Mission failed.",
+                )
                 self._publish(
                     name="ExecutiveMissionFailed",
                     payload={
@@ -131,6 +167,13 @@ class ExecutiveMissionOrchestrator:
             approval_required=mission_request.approval_required,
             required_output=mission_request.required_output,
         )
+
+    def _record_outcome_once(self, objective_id: str, outcome: str) -> None:
+        if self.state_store is None or objective_id in self._recorded_outcomes:
+            return
+
+        self.state_store.record_outcome(objective_id, outcome)
+        self._recorded_outcomes.add(objective_id)
 
     def _publish(self, *, name: str, payload: dict[str, object]) -> None:
         if self.event_bus is None:

@@ -61,3 +61,13 @@ class MissionRequest(ExecutiveModel):
     capability_ids: list[str] = Field(default_factory=list)
     required_output: str | None = None
     approval_required: bool = True
+
+
+class ExecutiveOrchestrationResult(ExecutiveModel):
+    """Outcome of submitting an executive objective into orchestration."""
+
+    objective_id: str = Field(min_length=1)
+    status: str = Field(min_length=1)
+    mission_id: str | None = None
+    mission_request_id: str | None = None
+    warnings: list[str] = Field(default_factory=list)

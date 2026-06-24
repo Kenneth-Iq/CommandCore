@@ -5,7 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from commandcore.events import InMemoryEventBus
-from commandcore.executive import ExecutivePolicyEngine
+from commandcore.executive import (
+    ExecutiveMissionOrchestrator,
+    ExecutivePolicyEngine,
+    ExecutivePolicyGate,
+    ExecutiveRuntime,
+    ExecutiveStateStore,
+)
 from commandcore.knowledge import InMemoryKnowledgeEngine
 from commandcore.mission import MissionEngine
 from commandcore.registries import (
@@ -30,12 +36,24 @@ class CommandCoreKernel:
     knowledge_engine: InMemoryKnowledgeEngine
     mission_engine: MissionEngine
     executive_policy_engine: ExecutivePolicyEngine
+    executive_policy_gate: ExecutivePolicyGate
+    executive_state_store: ExecutiveStateStore
+    executive_runtime: ExecutiveRuntime
+    executive_orchestrator: ExecutiveMissionOrchestrator
 
 
 def create_in_memory_kernel() -> CommandCoreKernel:
     """Create the current in-memory CommandCore kernel composition."""
 
     event_bus = InMemoryEventBus()
+    mission_engine = MissionEngine(event_bus=event_bus)
+    executive_policy_engine = ExecutivePolicyEngine(event_bus=event_bus)
+    executive_policy_gate = ExecutivePolicyGate(
+        policy_engine=executive_policy_engine,
+        event_bus=event_bus,
+    )
+    executive_state_store = ExecutiveStateStore(event_bus=event_bus)
+    executive_runtime = ExecutiveRuntime(event_bus=event_bus)
     return CommandCoreKernel(
         event_bus=event_bus,
         capability_registry=CapabilityRegistry(event_bus=event_bus),
@@ -44,6 +62,16 @@ def create_in_memory_kernel() -> CommandCoreKernel:
         project_registry=ProjectRegistry(event_bus=event_bus),
         workspace_registry=WorkspaceRegistry(event_bus=event_bus),
         knowledge_engine=InMemoryKnowledgeEngine(event_bus=event_bus),
-        mission_engine=MissionEngine(event_bus=event_bus),
-        executive_policy_engine=ExecutivePolicyEngine(event_bus=event_bus),
+        mission_engine=mission_engine,
+        executive_policy_engine=executive_policy_engine,
+        executive_policy_gate=executive_policy_gate,
+        executive_state_store=executive_state_store,
+        executive_runtime=executive_runtime,
+        executive_orchestrator=ExecutiveMissionOrchestrator(
+            executive_runtime=executive_runtime,
+            mission_engine=mission_engine,
+            policy_gate=executive_policy_gate,
+            state_store=executive_state_store,
+            event_bus=event_bus,
+        ),
     )
