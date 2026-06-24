@@ -8,9 +8,11 @@ API surface, external services, or runtime integrations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import ClassVar
 
 from commandcore.contracts import Project, Status
+from commandcore.framework.registry import BaseRegistry
 
 
 class DuplicateProjectIdError(ValueError):
@@ -22,7 +24,7 @@ class ProjectNotFoundError(KeyError):
 
 
 @dataclass(slots=True)
-class ProjectRegistry:
+class ProjectRegistry(BaseRegistry[Project]):
     """In-memory registry for canonical Project contracts.
 
     This is the first implementation of the project registry inside
@@ -31,7 +33,17 @@ class ProjectRegistry:
     or orchestration concerns.
     """
 
-    _projects: dict[str, Project] = field(default_factory=dict)
+    entity_label: ClassVar[str] = "Project"
+    duplicate_error_cls: ClassVar[type[DuplicateProjectIdError]] = (
+        DuplicateProjectIdError
+    )
+    not_found_error_cls: ClassVar[type[ProjectNotFoundError]] = ProjectNotFoundError
+
+    @property
+    def _projects(self) -> dict[str, Project]:
+        """Compatibility alias for the historical internal storage name."""
+
+        return self._entities
 
     def register_project(self, project: Project) -> Project:
         """Register a project by its canonical ID.
@@ -40,13 +52,7 @@ class ProjectRegistry:
             DuplicateProjectIdError: If the project ID is already present.
         """
 
-        if project.id in self._projects:
-            raise DuplicateProjectIdError(
-                f"Project ID already registered: {project.id}"
-            )
-
-        self._projects[project.id] = project
-        return project
+        return self.register(project)
 
     def get_project(self, project_id: str) -> Project:
         """Return a project by ID.
@@ -55,41 +61,17 @@ class ProjectRegistry:
             ProjectNotFoundError: If the project ID is unknown.
         """
 
-        try:
-            return self._projects[project_id]
-        except KeyError as exc:
-            raise ProjectNotFoundError(
-                f"Project ID not found: {project_id}"
-            ) from exc
+        return self.get(project_id)
 
     def list_projects(self) -> list[Project]:
         """Return all registered projects in insertion order."""
 
-        return list(self._projects.values())
-
-    def find_by_name(self, name: str) -> list[Project]:
-        """Return all projects with a case-insensitive exact name match."""
-
-        normalized = name.strip().casefold()
-        return [
-            project
-            for project in self._projects.values()
-            if project.name.casefold() == normalized
-        ]
-
-    def find_by_status(self, status: Status) -> list[Project]:
-        """Return all projects matching the given general status."""
-
-        return [project for project in self._projects.values() if project.status == status]
+        return self.list()
 
     def find_by_company(self, company_id: str) -> list[Project]:
         """Return all projects attached to a given company ID."""
 
-        return [
-            project
-            for project in self._projects.values()
-            if project.company_id == company_id
-        ]
+        return [project for project in self.list() if project.company_id == company_id]
 
     def add_task(self, project_id: str, task_id: str) -> Project:
         """Attach a task ID to a project if it is not already present."""
@@ -99,8 +81,7 @@ class ProjectRegistry:
             return project
 
         updated = project.model_copy(update={"task_ids": [*project.task_ids, task_id]})
-        self._projects[project_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_task(self, project_id: str, task_id: str) -> Project:
         """Remove a task ID from a project if it is present."""
@@ -114,8 +95,7 @@ class ProjectRegistry:
                 "task_ids": [existing for existing in project.task_ids if existing != task_id]
             }
         )
-        self._projects[project_id] = updated
-        return updated
+        return self._store(updated)
 
     def add_capability(self, project_id: str, capability_id: str) -> Project:
         """Attach a capability ID to a project if it is not already present."""
@@ -127,8 +107,7 @@ class ProjectRegistry:
         updated = project.model_copy(
             update={"capability_ids": [*project.capability_ids, capability_id]}
         )
-        self._projects[project_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_capability(self, project_id: str, capability_id: str) -> Project:
         """Remove a capability ID from a project if it is present."""
@@ -146,8 +125,7 @@ class ProjectRegistry:
                 ]
             }
         )
-        self._projects[project_id] = updated
-        return updated
+        return self._store(updated)
 
     def add_agent(self, project_id: str, agent_id: str) -> Project:
         """Attach an agent ID to a project if it is not already present."""
@@ -157,8 +135,7 @@ class ProjectRegistry:
             return project
 
         updated = project.model_copy(update={"agent_ids": [*project.agent_ids, agent_id]})
-        self._projects[project_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_agent(self, project_id: str, agent_id: str) -> Project:
         """Remove an agent ID from a project if it is present."""
@@ -172,5 +149,4 @@ class ProjectRegistry:
                 "agent_ids": [existing for existing in project.agent_ids if existing != agent_id]
             }
         )
-        self._projects[project_id] = updated
-        return updated
+        return self._store(updated)
