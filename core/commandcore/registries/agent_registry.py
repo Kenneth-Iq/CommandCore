@@ -8,9 +8,11 @@ API surface, external services, or runtime integrations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import ClassVar
 
 from commandcore.contracts import Agent, AgentRuntimeStatus, Status
+from commandcore.framework.registry import BaseRegistry
 
 
 class DuplicateAgentIdError(ValueError):
@@ -22,7 +24,7 @@ class AgentNotFoundError(KeyError):
 
 
 @dataclass(slots=True)
-class AgentRegistry:
+class AgentRegistry(BaseRegistry[Agent]):
     """In-memory registry for canonical Agent contracts.
 
     This is the first implementation of the CommandCore AI Workforce registry.
@@ -31,7 +33,17 @@ class AgentRegistry:
     orchestration concerns.
     """
 
-    _agents: dict[str, Agent] = field(default_factory=dict)
+    entity_label: ClassVar[str] = "Agent"
+    duplicate_error_cls: ClassVar[type[DuplicateAgentIdError]] = (
+        DuplicateAgentIdError
+    )
+    not_found_error_cls: ClassVar[type[AgentNotFoundError]] = AgentNotFoundError
+
+    @property
+    def _agents(self) -> dict[str, Agent]:
+        """Compatibility alias for the historical internal storage name."""
+
+        return self._entities
 
     def register_agent(self, agent: Agent) -> Agent:
         """Register an agent by its canonical ID.
@@ -40,11 +52,7 @@ class AgentRegistry:
             DuplicateAgentIdError: If the agent ID is already present.
         """
 
-        if agent.id in self._agents:
-            raise DuplicateAgentIdError(f"Agent ID already registered: {agent.id}")
-
-        self._agents[agent.id] = agent
-        return agent
+        return self.register(agent)
 
     def get_agent(self, agent_id: str) -> Agent:
         """Return an agent by ID.
@@ -53,30 +61,12 @@ class AgentRegistry:
             AgentNotFoundError: If the agent ID is unknown.
         """
 
-        try:
-            return self._agents[agent_id]
-        except KeyError as exc:
-            raise AgentNotFoundError(f"Agent ID not found: {agent_id}") from exc
+        return self.get(agent_id)
 
     def list_agents(self) -> list[Agent]:
         """Return all registered agents in insertion order."""
 
-        return list(self._agents.values())
-
-    def find_by_name(self, name: str) -> list[Agent]:
-        """Return all agents with a case-insensitive exact name match."""
-
-        normalized = name.strip().casefold()
-        return [
-            agent
-            for agent in self._agents.values()
-            if agent.name.casefold() == normalized
-        ]
-
-    def find_by_status(self, status: Status) -> list[Agent]:
-        """Return all agents matching the given general status."""
-
-        return [agent for agent in self._agents.values() if agent.status == status]
+        return self.list()
 
     def find_by_runtime_status(
         self, runtime_status: AgentRuntimeStatus
@@ -84,19 +74,13 @@ class AgentRegistry:
         """Return all agents matching the given runtime status."""
 
         return [
-            agent
-            for agent in self._agents.values()
-            if agent.runtime_status == runtime_status
+            agent for agent in self.list() if agent.runtime_status == runtime_status
         ]
 
     def find_by_capability(self, capability_id: str) -> list[Agent]:
         """Return all agents that advertise the given capability ID."""
 
-        return [
-            agent
-            for agent in self._agents.values()
-            if capability_id in agent.capability_ids
-        ]
+        return [agent for agent in self.list() if capability_id in agent.capability_ids]
 
     def add_capability(self, agent_id: str, capability_id: str) -> Agent:
         """Attach a capability ID to an agent if it is not already present."""
@@ -108,8 +92,7 @@ class AgentRegistry:
         updated = agent.model_copy(
             update={"capability_ids": [*agent.capability_ids, capability_id]}
         )
-        self._agents[agent_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_capability(self, agent_id: str, capability_id: str) -> Agent:
         """Remove a capability ID from an agent if it is present."""
@@ -127,5 +110,4 @@ class AgentRegistry:
                 ]
             }
         )
-        self._agents[agent_id] = updated
-        return updated
+        return self._store(updated)
