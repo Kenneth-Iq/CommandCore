@@ -8,9 +8,11 @@ no database, API surface, external services, or runtime integrations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import ClassVar
 
 from commandcore.contracts import Capability, CapabilityCertificationStatus, Status
+from commandcore.framework.registry import BaseRegistry
 
 
 class DuplicateCapabilityIdError(ValueError):
@@ -22,7 +24,7 @@ class CapabilityNotFoundError(KeyError):
 
 
 @dataclass(slots=True)
-class CapabilityRegistry:
+class CapabilityRegistry(BaseRegistry[Capability]):
     """In-memory registry for canonical Capability contracts.
 
     This is the first implementation of the Living Capability Library. It owns
@@ -31,7 +33,19 @@ class CapabilityRegistry:
     orchestration concerns.
     """
 
-    _capabilities: dict[str, Capability] = field(default_factory=dict)
+    entity_label: ClassVar[str] = "Capability"
+    duplicate_error_cls: ClassVar[type[DuplicateCapabilityIdError]] = (
+        DuplicateCapabilityIdError
+    )
+    not_found_error_cls: ClassVar[type[CapabilityNotFoundError]] = (
+        CapabilityNotFoundError
+    )
+
+    @property
+    def _capabilities(self) -> dict[str, Capability]:
+        """Compatibility alias for the historical internal storage name."""
+
+        return self._entities
 
     def register_capability(self, capability: Capability) -> Capability:
         """Register a capability by its canonical ID.
@@ -40,13 +54,7 @@ class CapabilityRegistry:
             DuplicateCapabilityIdError: If the capability ID is already present.
         """
 
-        if capability.id in self._capabilities:
-            raise DuplicateCapabilityIdError(
-                f"Capability ID already registered: {capability.id}"
-            )
-
-        self._capabilities[capability.id] = capability
-        return capability
+        return self.register(capability)
 
     def get_capability(self, capability_id: str) -> Capability:
         """Return a capability by ID.
@@ -55,36 +63,12 @@ class CapabilityRegistry:
             CapabilityNotFoundError: If the capability ID is unknown.
         """
 
-        try:
-            return self._capabilities[capability_id]
-        except KeyError as exc:
-            raise CapabilityNotFoundError(
-                f"Capability ID not found: {capability_id}"
-            ) from exc
+        return self.get(capability_id)
 
     def list_capabilities(self) -> list[Capability]:
         """Return all registered capabilities in insertion order."""
 
-        return list(self._capabilities.values())
-
-    def find_by_name(self, name: str) -> list[Capability]:
-        """Return all capabilities with a case-insensitive exact name match."""
-
-        normalized = name.strip().casefold()
-        return [
-            capability
-            for capability in self._capabilities.values()
-            if capability.name.casefold() == normalized
-        ]
-
-    def find_by_status(self, status: Status) -> list[Capability]:
-        """Return all capabilities matching the given lifecycle status."""
-
-        return [
-            capability
-            for capability in self._capabilities.values()
-            if capability.status == status
-        ]
+        return self.list()
 
     def find_by_certification(
         self, certification_status: CapabilityCertificationStatus
@@ -93,7 +77,7 @@ class CapabilityRegistry:
 
         return [
             capability
-            for capability in self._capabilities.values()
+            for capability in self.list()
             if capability.certification_status == certification_status
         ]
 
@@ -112,8 +96,7 @@ class CapabilityRegistry:
         updated = capability.model_copy(
             update={"consumers": [*capability.consumers, consumer_id]}
         )
-        self._capabilities[capability_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_consumer(self, capability_id: str, consumer_id: str) -> Capability:
         """Remove a consumer ID from a capability if it is present."""
@@ -131,5 +114,4 @@ class CapabilityRegistry:
                 ]
             }
         )
-        self._capabilities[capability_id] = updated
-        return updated
+        return self._store(updated)
