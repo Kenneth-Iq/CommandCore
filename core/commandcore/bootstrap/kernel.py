@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from commandcore.events import InMemoryEventBus
+from commandcore.executive import ExecutivePolicyEngine
 from commandcore.knowledge import InMemoryKnowledgeEngine
 from commandcore.mission import MissionEngine
 from commandcore.registries import (
@@ -28,6 +29,7 @@ class CommandCoreKernel:
     workspace_registry: WorkspaceRegistry
     knowledge_engine: InMemoryKnowledgeEngine
     mission_engine: MissionEngine
+    executive_policy_engine: ExecutivePolicyEngine
 
 
 def create_in_memory_kernel() -> CommandCoreKernel:
@@ -43,4 +45,5 @@ def create_in_memory_kernel() -> CommandCoreKernel:
         workspace_registry=WorkspaceRegistry(event_bus=event_bus),
         knowledge_engine=InMemoryKnowledgeEngine(event_bus=event_bus),
         mission_engine=MissionEngine(event_bus=event_bus),
+        executive_policy_engine=ExecutivePolicyEngine(event_bus=event_bus),
     )
