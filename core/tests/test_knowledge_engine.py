@@ -133,11 +133,18 @@ def test_events_are_published_only_when_event_bus_is_provided():
 
     events = bus.list_events()
     assert [event.payload["event_name"] for event in events] == [
-        "KnowledgeAssetCaptured",
-        "KnowledgeAssetCaptured",
-        "KnowledgeAssetLinked",
+        "KnowledgeAssetCreated",
+        "KnowledgeAssetCreated",
+        "KnowledgeAssetsLinked",
     ]
-    assert events[-1].payload["linked_entity_id"] == "know-target"
+    assert events[0].payload["asset_id"] == "know-source"
+    assert events[0].payload["classification"] == "runbook"
+    assert events[0].payload["project_id"] == "proj-jarvis"
+    assert events[-1].payload["source_asset_id"] == "know-source"
+    assert events[-1].payload["target_asset_id"] == "know-target"
+    assert events[-1].payload["relationship_type"] == "supports"
+    assert events[-1].payload["source_classification"] == "runbook"
+    assert events[-1].payload["target_classification"] == "decision"
 
 
 def test_no_events_are_published_without_event_bus():

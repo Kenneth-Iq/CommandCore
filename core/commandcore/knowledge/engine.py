@@ -46,14 +46,15 @@ class InMemoryKnowledgeEngine:
 
         self._assets[asset.id] = asset
         self._publish(
-            name="KnowledgeAssetCaptured",
+            name="KnowledgeAssetCreated",
             payload={
-                "knowledge_id": asset.id,
+                "asset_id": asset.id,
                 "title": asset.title,
-                "asset_type": asset.asset_type,
+                "classification": asset.asset_type,
                 "workspace_id": asset.workspace_id,
                 "company_id": asset.company_id,
                 "project_id": asset.project_id,
+                "source_record_id": asset.source_record_id,
                 "safe_to_query": asset.safe_to_query,
             },
         )
@@ -120,12 +121,15 @@ class InMemoryKnowledgeEngine:
         self._relationships_by_asset[source_asset_id].append(relationship)
         self._relationships_by_asset[target_asset_id].append(relationship)
         self._publish(
-            name="KnowledgeAssetLinked",
+            name="KnowledgeAssetsLinked",
             payload={
-                "knowledge_id": source_asset_id,
-                "linked_entity_type": "knowledge_asset",
-                "linked_entity_id": target_asset_id,
-                "link_type": relationship_type,
+                "source_asset_id": source_asset_id,
+                "target_asset_id": target_asset_id,
+                "relationship_type": relationship_type,
+                "source_scope": self._scope_summary(self.get_asset(source_asset_id)),
+                "target_scope": self._scope_summary(self.get_asset(target_asset_id)),
+                "source_classification": self.get_asset(source_asset_id).asset_type,
+                "target_classification": self.get_asset(target_asset_id).asset_type,
             },
         )
         return relationship
@@ -135,6 +139,15 @@ class InMemoryKnowledgeEngine:
 
         self.get_asset(asset_id)
         return list(self._relationships_by_asset[asset_id])
+
+    @staticmethod
+    def _scope_summary(asset: KnowledgeAsset) -> dict[str, str | None]:
+        return {
+            "workspace_id": asset.workspace_id,
+            "company_id": asset.company_id,
+            "project_id": asset.project_id,
+            "source_record_id": asset.source_record_id,
+        }
 
     def _publish(self, *, name: str, payload: dict[str, object]) -> None:
         if self._event_bus is None:
