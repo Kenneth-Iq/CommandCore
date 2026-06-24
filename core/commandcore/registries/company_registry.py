@@ -8,9 +8,11 @@ no database, API surface, external services, or runtime integrations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import ClassVar
 
 from commandcore.contracts import Company, Status
+from commandcore.framework.registry import BaseRegistry
 
 
 class DuplicateCompanyIdError(ValueError):
@@ -22,7 +24,7 @@ class CompanyNotFoundError(KeyError):
 
 
 @dataclass(slots=True)
-class CompanyRegistry:
+class CompanyRegistry(BaseRegistry[Company]):
     """In-memory registry for canonical Company contracts.
 
     This is the first implementation of the CommandCore living company/world
@@ -31,7 +33,17 @@ class CompanyRegistry:
     or orchestration concerns.
     """
 
-    _companies: dict[str, Company] = field(default_factory=dict)
+    entity_label: ClassVar[str] = "Company"
+    duplicate_error_cls: ClassVar[type[DuplicateCompanyIdError]] = (
+        DuplicateCompanyIdError
+    )
+    not_found_error_cls: ClassVar[type[CompanyNotFoundError]] = CompanyNotFoundError
+
+    @property
+    def _companies(self) -> dict[str, Company]:
+        """Compatibility alias for the historical internal storage name."""
+
+        return self._entities
 
     def register_company(self, company: Company) -> Company:
         """Register a company by its canonical ID.
@@ -40,13 +52,7 @@ class CompanyRegistry:
             DuplicateCompanyIdError: If the company ID is already present.
         """
 
-        if company.id in self._companies:
-            raise DuplicateCompanyIdError(
-                f"Company ID already registered: {company.id}"
-            )
-
-        self._companies[company.id] = company
-        return company
+        return self.register(company)
 
     def get_company(self, company_id: str) -> Company:
         """Return a company by ID.
@@ -55,34 +61,12 @@ class CompanyRegistry:
             CompanyNotFoundError: If the company ID is unknown.
         """
 
-        try:
-            return self._companies[company_id]
-        except KeyError as exc:
-            raise CompanyNotFoundError(
-                f"Company ID not found: {company_id}"
-            ) from exc
+        return self.get(company_id)
 
     def list_companies(self) -> list[Company]:
         """Return all registered companies in insertion order."""
 
-        return list(self._companies.values())
-
-    def find_by_name(self, name: str) -> list[Company]:
-        """Return all companies with a case-insensitive exact name match."""
-
-        normalized = name.strip().casefold()
-        return [
-            company
-            for company in self._companies.values()
-            if company.name.casefold() == normalized
-        ]
-
-    def find_by_status(self, status: Status) -> list[Company]:
-        """Return all companies matching the given general status."""
-
-        return [
-            company for company in self._companies.values() if company.status == status
-        ]
+        return self.list()
 
     def add_project(self, company_id: str, project_id: str) -> Company:
         """Attach a project ID to a company if it is not already present."""
@@ -94,8 +78,7 @@ class CompanyRegistry:
         updated = company.model_copy(
             update={"project_ids": [*company.project_ids, project_id]}
         )
-        self._companies[company_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_project(self, company_id: str, project_id: str) -> Company:
         """Remove a project ID from a company if it is present."""
@@ -111,8 +94,7 @@ class CompanyRegistry:
                 ]
             }
         )
-        self._companies[company_id] = updated
-        return updated
+        return self._store(updated)
 
     def add_capability(self, company_id: str, capability_id: str) -> Company:
         """Attach a capability ID to a company if it is not already present."""
@@ -124,8 +106,7 @@ class CompanyRegistry:
         updated = company.model_copy(
             update={"capability_ids": [*company.capability_ids, capability_id]}
         )
-        self._companies[company_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_capability(self, company_id: str, capability_id: str) -> Company:
         """Remove a capability ID from a company if it is present."""
@@ -143,8 +124,7 @@ class CompanyRegistry:
                 ]
             }
         )
-        self._companies[company_id] = updated
-        return updated
+        return self._store(updated)
 
     def add_agent(self, company_id: str, agent_id: str) -> Company:
         """Attach an agent ID to a company if it is not already present."""
@@ -156,8 +136,7 @@ class CompanyRegistry:
         updated = company.model_copy(
             update={"agent_ids": [*company.agent_ids, agent_id]}
         )
-        self._companies[company_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_agent(self, company_id: str, agent_id: str) -> Company:
         """Remove an agent ID from a company if it is present."""
@@ -173,5 +152,4 @@ class CompanyRegistry:
                 ]
             }
         )
-        self._companies[company_id] = updated
-        return updated
+        return self._store(updated)
