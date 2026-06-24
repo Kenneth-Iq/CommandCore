@@ -8,9 +8,11 @@ API surface, external services, or runtime integrations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import ClassVar
 
 from commandcore.contracts import Status, Workspace
+from commandcore.framework.registry import BaseRegistry
 
 
 class DuplicateWorkspaceIdError(ValueError):
@@ -22,7 +24,7 @@ class WorkspaceNotFoundError(KeyError):
 
 
 @dataclass(slots=True)
-class WorkspaceRegistry:
+class WorkspaceRegistry(BaseRegistry[Workspace]):
     """In-memory registry for canonical Workspace contracts.
 
     This is the first implementation of the CommandCore workspace registry.
@@ -31,7 +33,19 @@ class WorkspaceRegistry:
     orchestration concerns.
     """
 
-    _workspaces: dict[str, Workspace] = field(default_factory=dict)
+    entity_label: ClassVar[str] = "Workspace"
+    duplicate_error_cls: ClassVar[type[DuplicateWorkspaceIdError]] = (
+        DuplicateWorkspaceIdError
+    )
+    not_found_error_cls: ClassVar[type[WorkspaceNotFoundError]] = (
+        WorkspaceNotFoundError
+    )
+
+    @property
+    def _workspaces(self) -> dict[str, Workspace]:
+        """Compatibility alias for the historical internal storage name."""
+
+        return self._entities
 
     def register_workspace(self, workspace: Workspace) -> Workspace:
         """Register a workspace by its canonical ID.
@@ -40,13 +54,7 @@ class WorkspaceRegistry:
             DuplicateWorkspaceIdError: If the workspace ID is already present.
         """
 
-        if workspace.id in self._workspaces:
-            raise DuplicateWorkspaceIdError(
-                f"Workspace ID already registered: {workspace.id}"
-            )
-
-        self._workspaces[workspace.id] = workspace
-        return workspace
+        return self.register(workspace)
 
     def get_workspace(self, workspace_id: str) -> Workspace:
         """Return a workspace by ID.
@@ -55,36 +63,12 @@ class WorkspaceRegistry:
             WorkspaceNotFoundError: If the workspace ID is unknown.
         """
 
-        try:
-            return self._workspaces[workspace_id]
-        except KeyError as exc:
-            raise WorkspaceNotFoundError(
-                f"Workspace ID not found: {workspace_id}"
-            ) from exc
+        return self.get(workspace_id)
 
     def list_workspaces(self) -> list[Workspace]:
         """Return all registered workspaces in insertion order."""
 
-        return list(self._workspaces.values())
-
-    def find_by_name(self, name: str) -> list[Workspace]:
-        """Return all workspaces with a case-insensitive exact name match."""
-
-        normalized = name.strip().casefold()
-        return [
-            workspace
-            for workspace in self._workspaces.values()
-            if workspace.name.casefold() == normalized
-        ]
-
-    def find_by_status(self, status: Status) -> list[Workspace]:
-        """Return all workspaces matching the given general status."""
-
-        return [
-            workspace
-            for workspace in self._workspaces.values()
-            if workspace.status == status
-        ]
+        return self.list()
 
     def add_company(self, workspace_id: str, company_id: str) -> Workspace:
         """Attach a company ID to a workspace if it is not already present."""
@@ -96,8 +80,7 @@ class WorkspaceRegistry:
         updated = workspace.model_copy(
             update={"company_ids": [*workspace.company_ids, company_id]}
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_company(self, workspace_id: str, company_id: str) -> Workspace:
         """Remove a company ID from a workspace if it is present."""
@@ -115,8 +98,7 @@ class WorkspaceRegistry:
                 ]
             }
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
 
     def add_project(self, workspace_id: str, project_id: str) -> Workspace:
         """Attach a project ID to a workspace if it is not already present."""
@@ -128,8 +110,7 @@ class WorkspaceRegistry:
         updated = workspace.model_copy(
             update={"project_ids": [*workspace.project_ids, project_id]}
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_project(self, workspace_id: str, project_id: str) -> Workspace:
         """Remove a project ID from a workspace if it is present."""
@@ -147,8 +128,7 @@ class WorkspaceRegistry:
                 ]
             }
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
 
     def add_agent(self, workspace_id: str, agent_id: str) -> Workspace:
         """Attach an agent ID to a workspace if it is not already present."""
@@ -160,8 +140,7 @@ class WorkspaceRegistry:
         updated = workspace.model_copy(
             update={"agent_ids": [*workspace.agent_ids, agent_id]}
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_agent(self, workspace_id: str, agent_id: str) -> Workspace:
         """Remove an agent ID from a workspace if it is present."""
@@ -177,8 +156,7 @@ class WorkspaceRegistry:
                 ]
             }
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
 
     def add_capability(self, workspace_id: str, capability_id: str) -> Workspace:
         """Attach a capability ID to a workspace if it is not already present."""
@@ -190,8 +168,7 @@ class WorkspaceRegistry:
         updated = workspace.model_copy(
             update={"capability_ids": [*workspace.capability_ids, capability_id]}
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
 
     def remove_capability(self, workspace_id: str, capability_id: str) -> Workspace:
         """Remove a capability ID from a workspace if it is present."""
@@ -209,5 +186,4 @@ class WorkspaceRegistry:
                 ]
             }
         )
-        self._workspaces[workspace_id] = updated
-        return updated
+        return self._store(updated)
