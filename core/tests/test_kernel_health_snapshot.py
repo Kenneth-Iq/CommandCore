@@ -141,6 +141,7 @@ def test_build_kernel_health_snapshot_counts_core_components():
     snapshot = build_kernel_health_snapshot(kernel)
 
     assert snapshot["event_count"] == len(kernel.event_bus.list_events())
+    assert snapshot["audit_entry_count"] == len(kernel.audit_trail.list_entries())
     assert snapshot["registry_entity_counts"] == {
         "capabilities": 1,
         "agents": 1,
@@ -152,3 +153,7 @@ def test_build_kernel_health_snapshot_counts_core_components():
     assert snapshot["mission_count"] == 1
     assert snapshot["executive_objective_count"] == 1
     assert snapshot["policy_rule_count"] == 1
+    assert snapshot["executive_report_available"] is True
+    assert snapshot["policy_gate_available"] is True
+    assert snapshot["state_store_available"] is True
+    assert snapshot["orchestrator_available"] is True

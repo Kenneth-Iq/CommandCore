@@ -3,8 +3,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from commandcore.audit import InMemoryAuditTrail
-from commandcore.events import Event, EventType
+from commandcore.audit import InMemoryAuditTrail, attach_audit_trail
+from commandcore.events import Event, EventType, InMemoryEventBus
 
 
 def make_event(event_id: str, *, event_type: EventType, source: str) -> Event:
@@ -64,3 +64,15 @@ def test_clear_removes_all_entries():
     assert trail.list_entries() == []
     assert trail.list_by_event_type(EventType.DOMAIN) == []
     assert trail.list_by_source("tests.alpha") == []
+
+
+def test_attach_audit_trail_records_events_published_by_event_bus():
+    bus = InMemoryEventBus()
+    trail = attach_audit_trail(bus, InMemoryAuditTrail())
+    domain_event = make_event("evt-1", event_type=EventType.DOMAIN, source="tests.alpha")
+    system_event = make_event("evt-2", event_type=EventType.SYSTEM, source="tests.beta")
+
+    bus.publish(domain_event)
+    bus.publish(system_event)
+
+    assert trail.list_entries() == [domain_event, system_event]

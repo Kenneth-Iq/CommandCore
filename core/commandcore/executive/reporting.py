@@ -2,11 +2,43 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from commandcore.mission import MissionEngine
 
 from .policies import ExecutivePolicyEngine
 from .runtime import ExecutiveRuntime
 from .state import ExecutiveStateStore
+
+
+@dataclass(slots=True)
+class ExecutiveReportingService:
+    """Bound executive reporting service over in-memory kernel components."""
+
+    executive_runtime: ExecutiveRuntime
+    mission_engine: MissionEngine
+    policy_engine: ExecutivePolicyEngine
+    state_store: ExecutiveStateStore | None = None
+
+    def build_objective_report(self) -> dict[str, object]:
+        return build_objective_report(
+            self.executive_runtime,
+            state_store=self.state_store,
+        )
+
+    def build_mission_report(self) -> dict[str, object]:
+        return build_mission_report(self.mission_engine)
+
+    def build_policy_report(self) -> dict[str, object]:
+        return build_policy_report(self.policy_engine)
+
+    def build_executive_summary(self) -> dict[str, object]:
+        return build_executive_summary(
+            self.executive_runtime,
+            self.mission_engine,
+            self.policy_engine,
+            state_store=self.state_store,
+        )
 
 
 def build_objective_report(

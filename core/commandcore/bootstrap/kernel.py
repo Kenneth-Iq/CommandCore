@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Callable
 
+from commandcore.audit import InMemoryAuditTrail, attach_audit_trail
 from commandcore.events import InMemoryEventBus
 from commandcore.executive import (
     ExecutiveMissionOrchestrator,
     ExecutivePolicyEngine,
     ExecutivePolicyGate,
+    ExecutiveReportingService,
     ExecutiveRuntime,
     ExecutiveStateStore,
 )
+from commandcore.health import build_kernel_health_snapshot
 from commandcore.knowledge import InMemoryKnowledgeEngine
 from commandcore.mission import MissionEngine
 from commandcore.registries import (
@@ -35,6 +39,9 @@ class CommandCoreKernel:
     workspace_registry: WorkspaceRegistry
     knowledge_engine: InMemoryKnowledgeEngine
     mission_engine: MissionEngine
+    audit_trail: InMemoryAuditTrail
+    health_snapshot_builder: Callable[["CommandCoreKernel"], dict[str, object]]
+    executive_reporting: ExecutiveReportingService
     executive_policy_engine: ExecutivePolicyEngine
     executive_policy_gate: ExecutivePolicyGate
     executive_state_store: ExecutiveStateStore
@@ -54,6 +61,13 @@ def create_in_memory_kernel() -> CommandCoreKernel:
     )
     executive_state_store = ExecutiveStateStore(event_bus=event_bus)
     executive_runtime = ExecutiveRuntime(event_bus=event_bus)
+    audit_trail = attach_audit_trail(event_bus, InMemoryAuditTrail())
+    executive_reporting = ExecutiveReportingService(
+        executive_runtime=executive_runtime,
+        mission_engine=mission_engine,
+        policy_engine=executive_policy_engine,
+        state_store=executive_state_store,
+    )
     return CommandCoreKernel(
         event_bus=event_bus,
         capability_registry=CapabilityRegistry(event_bus=event_bus),
@@ -63,6 +77,9 @@ def create_in_memory_kernel() -> CommandCoreKernel:
         workspace_registry=WorkspaceRegistry(event_bus=event_bus),
         knowledge_engine=InMemoryKnowledgeEngine(event_bus=event_bus),
         mission_engine=mission_engine,
+        audit_trail=audit_trail,
+        health_snapshot_builder=build_kernel_health_snapshot,
+        executive_reporting=executive_reporting,
         executive_policy_engine=executive_policy_engine,
         executive_policy_gate=executive_policy_gate,
         executive_state_store=executive_state_store,

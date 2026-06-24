@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from commandcore.events import Event, EventType
+from commandcore.events import Event, EventType, InMemoryEventBus
 
 
 @dataclass(slots=True)
@@ -38,3 +38,14 @@ class InMemoryAuditTrail:
         """Remove all recorded audit entries."""
 
         self._entries.clear()
+
+
+def attach_audit_trail(
+    event_bus: InMemoryEventBus,
+    audit_trail: InMemoryAuditTrail,
+) -> InMemoryAuditTrail:
+    """Subscribe an audit trail to all event types on one event bus."""
+
+    for event_type in EventType:
+        event_bus.subscribe(event_type, audit_trail.record_event)
+    return audit_trail

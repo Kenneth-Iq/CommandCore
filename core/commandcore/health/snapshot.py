@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from commandcore.bootstrap import CommandCoreKernel
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from commandcore.bootstrap import CommandCoreKernel
 
 
-def build_kernel_health_snapshot(kernel: CommandCoreKernel) -> dict[str, object]:
+def build_kernel_health_snapshot(kernel: "CommandCoreKernel") -> dict[str, object]:
     """Build a point-in-time health snapshot from the in-memory kernel."""
 
     return {
         "event_count": len(kernel.event_bus.list_events()),
+        "audit_entry_count": len(kernel.audit_trail.list_entries()),
         "registry_entity_counts": {
             "capabilities": len(kernel.capability_registry.list_capabilities()),
             "agents": len(kernel.agent_registry.list_agents()),
@@ -21,4 +25,8 @@ def build_kernel_health_snapshot(kernel: CommandCoreKernel) -> dict[str, object]
         "mission_count": len(kernel.mission_engine.list_missions()),
         "executive_objective_count": len(kernel.executive_runtime.list_objectives()),
         "policy_rule_count": len(kernel.executive_policy_engine.list_rules()),
+        "executive_report_available": kernel.executive_reporting is not None,
+        "policy_gate_available": kernel.executive_policy_gate is not None,
+        "state_store_available": kernel.executive_state_store is not None,
+        "orchestrator_available": kernel.executive_orchestrator is not None,
     }

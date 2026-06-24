@@ -4,11 +4,13 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
+from commandcore.audit import InMemoryAuditTrail
 from commandcore.events import InMemoryEventBus
 from commandcore.executive import (
     ExecutiveMissionOrchestrator,
     ExecutivePolicyEngine,
     ExecutivePolicyGate,
+    ExecutiveReportingService,
     ExecutiveRuntime,
     ExecutiveStateStore,
     Objective,
@@ -49,6 +51,9 @@ def test_create_in_memory_kernel_returns_expected_component_types():
     assert isinstance(kernel.workspace_registry, WorkspaceRegistry)
     assert isinstance(kernel.knowledge_engine, InMemoryKnowledgeEngine)
     assert isinstance(kernel.mission_engine, MissionEngine)
+    assert isinstance(kernel.audit_trail, InMemoryAuditTrail)
+    assert callable(kernel.health_snapshot_builder)
+    assert isinstance(kernel.executive_reporting, ExecutiveReportingService)
     assert isinstance(kernel.executive_policy_engine, ExecutivePolicyEngine)
     assert isinstance(kernel.executive_policy_gate, ExecutivePolicyGate)
     assert isinstance(kernel.executive_state_store, ExecutiveStateStore)
@@ -73,6 +78,14 @@ def test_create_in_memory_kernel_shares_one_event_bus_across_components():
     assert kernel.executive_orchestrator.event_bus is kernel.event_bus
 
 
+def test_create_in_memory_kernel_attaches_audit_trail_to_shared_event_bus():
+    kernel = create_in_memory_kernel()
+
+    kernel.executive_runtime.submit_objective(make_objective("obj-1"))
+
+    assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()
+
+
 def test_create_in_memory_kernel_wires_orchestrator_to_bootstrapped_policy_and_state():
     kernel = create_in_memory_kernel()
 
@@ -80,6 +93,10 @@ def test_create_in_memory_kernel_wires_orchestrator_to_bootstrapped_policy_and_s
     assert kernel.executive_orchestrator.state_store is kernel.executive_state_store
     assert kernel.executive_orchestrator.executive_runtime is kernel.executive_runtime
     assert kernel.executive_orchestrator.mission_engine is kernel.mission_engine
+    assert kernel.executive_reporting.executive_runtime is kernel.executive_runtime
+    assert kernel.executive_reporting.mission_engine is kernel.mission_engine
+    assert kernel.executive_reporting.policy_engine is kernel.executive_policy_engine
+    assert kernel.executive_reporting.state_store is kernel.executive_state_store
 
 
 def test_create_in_memory_kernel_policy_engine_publishes_to_shared_event_bus():
@@ -124,3 +141,14 @@ def test_create_in_memory_kernel_orchestrator_uses_bootstrapped_governance_compo
     assert result.warnings == ["High-priority objectives require review."]
     assert kernel.executive_state_store.get_objective_history()["obj-1"][0].id == "obj-1"
     assert kernel.executive_state_store.get_mission_history("obj-1") == [result.mission_id]
+
+
+def test_create_in_memory_kernel_exposes_bound_observability_helpers():
+    kernel = create_in_memory_kernel()
+
+    kernel.executive_runtime.submit_objective(make_objective("obj-1"))
+    objective_report = kernel.executive_reporting.build_objective_report()
+    health_snapshot = kernel.health_snapshot_builder(kernel)
+
+    assert objective_report["objective_count"] == 1
+    assert health_snapshot["executive_report_available"] is True
