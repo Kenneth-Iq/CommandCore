@@ -144,6 +144,18 @@ class MissionEngine:
         self.get_mission(mission_id)
         return list(self._tasks[mission_id])
 
+    def get_result_summary(self, mission_id: str) -> str | None:
+        """Return the stored completion summary for a mission, if any."""
+
+        self.get_mission(mission_id)
+        return self._result_summaries.get(mission_id)
+
+    def get_failure_reason(self, mission_id: str) -> str | None:
+        """Return the stored failure reason for a mission, if any."""
+
+        self.get_mission(mission_id)
+        return self._failure_reasons.get(mission_id)
+
     def complete_mission(
         self, mission_id: str, result_summary: str | None = None
     ) -> Mission:
