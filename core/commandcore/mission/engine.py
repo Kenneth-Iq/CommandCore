@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from commandcore.contracts import Mission, MissionStatus, Task
+from commandcore.events import Event, EventType, InMemoryEventBus
 
 
 class DuplicateMissionIdError(ValueError):
@@ -36,6 +37,10 @@ class MissionEngine:
     _tasks: dict[str, list[Task]] = field(default_factory=dict)
     _result_summaries: dict[str, str] = field(default_factory=dict)
     _failure_reasons: dict[str, str] = field(default_factory=dict)
+    event_bus: InMemoryEventBus | None = None
+    source: str | None = None
+
+    default_event_source: str = "commandcore.mission.engine"
 
     def create_mission(self, mission: Mission) -> Mission:
         """Create a mission by canonical mission ID.
@@ -51,6 +56,18 @@ class MissionEngine:
 
         self._missions[mission.id] = mission
         self._tasks[mission.id] = []
+        self._publish(
+            name="MissionCreated",
+            payload={
+                "mission_id": mission.id,
+                "title": mission.title,
+                "status": self._status_value(mission.status),
+                "requested_by": mission.requested_by,
+                "assigned_agent_id": mission.assigned_agent_id,
+                "capability_ids": list(mission.capability_ids),
+                "scope": list(mission.scope),
+            },
+        )
         return mission
 
     def get_mission(self, mission_id: str) -> Mission:
@@ -76,6 +93,14 @@ class MissionEngine:
         mission = self.get_mission(mission_id)
         updated = mission.model_copy(update={"status": status})
         self._missions[mission_id] = updated
+        self._publish(
+            name="MissionStatusChanged",
+            payload={
+                "mission_id": mission_id,
+                "previous_status": self._status_value(mission.status),
+                "status": self._status_value(status),
+            },
+        )
         return updated
 
     def assign_agent(self, mission_id: str, agent_id: str) -> Mission:
@@ -84,6 +109,15 @@ class MissionEngine:
         mission = self.get_mission(mission_id)
         updated = mission.model_copy(update={"assigned_agent_id": agent_id})
         self._missions[mission_id] = updated
+        self._publish(
+            name="MissionAgentAssigned",
+            payload={
+                "mission_id": mission_id,
+                "assigned_agent_id": agent_id,
+                "previous_agent_id": mission.assigned_agent_id,
+                "status": self._status_value(updated.status),
+            },
+        )
         return updated
 
     def add_task(self, mission_id: str, task: Task) -> Task:
@@ -91,6 +125,17 @@ class MissionEngine:
 
         self.get_mission(mission_id)
         self._tasks[mission_id].append(task)
+        self._publish(
+            name="MissionTaskAdded",
+            payload={
+                "mission_id": mission_id,
+                "task_id": task.id,
+                "task_objective": task.objective,
+                "task_status": self._status_value(task.status),
+                "project_id": task.project_id,
+                "capability_id": task.capability_id,
+            },
+        )
         return task
 
     def list_tasks(self, mission_id: str) -> list[Task]:
@@ -108,7 +153,16 @@ class MissionEngine:
         if result_summary is not None:
             self._result_summaries[mission_id] = result_summary
         self._failure_reasons.pop(mission_id, None)
-        return self.update_status(mission_id, MissionStatus.COMPLETED)
+        updated = self.update_status(mission_id, MissionStatus.COMPLETED)
+        self._publish(
+            name="MissionCompleted",
+            payload={
+                "mission_id": mission_id,
+                "status": self._status_value(updated.status),
+                "result_summary": result_summary,
+            },
+        )
+        return updated
 
     def fail_mission(self, mission_id: str, reason: str) -> Mission:
         """Mark a mission as failed and store a failure reason."""
@@ -116,4 +170,29 @@ class MissionEngine:
         self.get_mission(mission_id)
         self._failure_reasons[mission_id] = reason
         self._result_summaries.pop(mission_id, None)
-        return self.update_status(mission_id, MissionStatus.FAILED)
+        updated = self.update_status(mission_id, MissionStatus.FAILED)
+        self._publish(
+            name="MissionFailed",
+            payload={
+                "mission_id": mission_id,
+                "status": self._status_value(updated.status),
+                "reason": reason,
+            },
+        )
+        return updated
+
+    def _publish(self, *, name: str, payload: dict[str, object]) -> None:
+        if self.event_bus is None:
+            return
+
+        self.event_bus.publish(
+            Event(
+                type=EventType.DOMAIN,
+                source=self.source or self.default_event_source,
+                payload={"event_name": name, **payload},
+            )
+        )
+
+    @staticmethod
+    def _status_value(status: MissionStatus) -> str:
+        return status.value if hasattr(status, "value") else str(status)

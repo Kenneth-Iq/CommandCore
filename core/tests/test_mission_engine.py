@@ -15,6 +15,7 @@ from commandcore.contracts import (
     Status,
     Task,
 )
+from commandcore.events import InMemoryEventBus
 from commandcore.mission import (
     DuplicateMissionIdError,
     MissionEngine,
@@ -177,3 +178,87 @@ def test_status_operations_raise_for_missing_mission():
 
     with pytest.raises(MissionNotFoundError):
         engine.fail_mission("missing-mission", "Missing context.")
+
+
+def test_create_mission_publishes_created_event_when_bus_is_provided():
+    bus = InMemoryEventBus()
+    mission = make_mission("mission-1")
+
+    MissionEngine(event_bus=bus, source="custom.mission.source").create_mission(mission)
+
+    [event] = bus.list_events()
+    assert event.source == "custom.mission.source"
+    assert event.payload["event_name"] == "MissionCreated"
+    assert event.payload["mission_id"] == "mission-1"
+    assert event.payload["title"] == "Prepare capability review"
+    assert event.payload["status"] == "requested"
+
+
+def test_update_status_publishes_status_changed_event_when_bus_is_provided():
+    bus = InMemoryEventBus()
+    engine = MissionEngine(event_bus=bus)
+    mission = engine.create_mission(make_mission("mission-1"))
+
+    engine.update_status(mission.id, MissionStatus.ASSIGNED)
+
+    events = bus.list_events()
+    assert events[-1].payload["event_name"] == "MissionStatusChanged"
+    assert events[-1].payload["mission_id"] == "mission-1"
+    assert events[-1].payload["previous_status"] == "requested"
+    assert events[-1].payload["status"] == "assigned"
+
+
+def test_assign_agent_publishes_agent_assigned_event_when_bus_is_provided():
+    bus = InMemoryEventBus()
+    engine = MissionEngine(event_bus=bus)
+    mission = engine.create_mission(make_mission("mission-1"))
+
+    engine.assign_agent(mission.id, "agent-hermes")
+
+    events = bus.list_events()
+    assert events[-1].payload["event_name"] == "MissionAgentAssigned"
+    assert events[-1].payload["mission_id"] == "mission-1"
+    assert events[-1].payload["assigned_agent_id"] == "agent-hermes"
+
+
+def test_add_task_publishes_task_added_event_when_bus_is_provided():
+    bus = InMemoryEventBus()
+    engine = MissionEngine(event_bus=bus)
+    mission = engine.create_mission(make_mission("mission-1"))
+    task = make_task("task-1")
+
+    engine.add_task(mission.id, task)
+
+    events = bus.list_events()
+    assert events[-1].payload["event_name"] == "MissionTaskAdded"
+    assert events[-1].payload["mission_id"] == "mission-1"
+    assert events[-1].payload["task_id"] == "task-1"
+    assert events[-1].payload["task_objective"] == "Prepare review context"
+
+
+def test_complete_mission_publishes_completed_event_when_bus_is_provided():
+    bus = InMemoryEventBus()
+    engine = MissionEngine(event_bus=bus)
+    mission = engine.create_mission(make_mission("mission-1"))
+
+    engine.complete_mission(mission.id, result_summary="Capability review completed.")
+
+    events = bus.list_events()
+    assert events[-2].payload["event_name"] == "MissionStatusChanged"
+    assert events[-1].payload["event_name"] == "MissionCompleted"
+    assert events[-1].payload["mission_id"] == "mission-1"
+    assert events[-1].payload["result_summary"] == "Capability review completed."
+
+
+def test_fail_mission_publishes_failed_event_when_bus_is_provided():
+    bus = InMemoryEventBus()
+    engine = MissionEngine(event_bus=bus)
+    mission = engine.create_mission(make_mission("mission-1"))
+
+    engine.fail_mission(mission.id, reason="Missing approved context.")
+
+    events = bus.list_events()
+    assert events[-2].payload["event_name"] == "MissionStatusChanged"
+    assert events[-1].payload["event_name"] == "MissionFailed"
+    assert events[-1].payload["mission_id"] == "mission-1"
+    assert events[-1].payload["reason"] == "Missing approved context."
