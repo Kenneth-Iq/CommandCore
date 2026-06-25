@@ -7,7 +7,7 @@ type MetricCardProps = {
 
 export function MetricCard({ metric }: MetricCardProps) {
   return (
-    <article className="metric-card">
+    <article className={`metric-card ${metric.tone ? `tone-${metric.tone}` : ""}`}>
       <div className="metric-header">
         <p>{metric.label}</p>
         {metric.tone ? <StatusBadge tone={metric.tone}>{metric.tone}</StatusBadge> : null}

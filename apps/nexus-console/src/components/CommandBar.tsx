@@ -11,15 +11,18 @@ export function CommandBar() {
       <div className="command-bar-icon">J</div>
       <div className="command-bar-copy">
         <strong>Ask Jarvis or search CommandCore...</strong>
-        <span>Placeholder command surface for future runtime and search integration.</span>
+        <span>Command routing and search surface for the governed runtime.</span>
       </div>
       <div className="command-bar-shortcut">Ctrl K</div>
       <div className="command-suggestions">
-        {suggestions.map((suggestion) => (
-          <button key={suggestion} type="button" className="command-chip">
-            {suggestion}
-          </button>
-        ))}
+        <p className="command-suggestions-label">Quick Actions</p>
+        <div className="command-suggestions-row">
+          {suggestions.map((suggestion) => (
+            <button key={suggestion} type="button" className="command-chip">
+              {suggestion}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );

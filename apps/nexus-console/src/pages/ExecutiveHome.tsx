@@ -36,19 +36,25 @@ export function ExecutiveHome({ page, pages, source, sourceMessage }: ExecutiveH
         status={page.status}
       />
 
-      <section className="metrics-grid executive-home-metrics">
+      <section className="metrics-grid executive-summary-band">
         {page.metrics.map((metric) => (
           <MetricCard key={metric.label} metric={metric} />
         ))}
       </section>
 
-      <section className="executive-home-grid">
+      <section className="executive-attention-band">
         <AttentionPanel items={attentionItems} />
+      </section>
+
+      <section className="executive-runtime-grid">
         <InfoPanel title="Active Missions" rows={missionRows} />
         <InfoPanel title="Agent Runtime" rows={agentRows} />
         <InfoPanel title="Tool Runtime" rows={toolRows} />
+      </section>
+
+      <section className="executive-change-grid">
         <InfoPanel title="Conversation / Knowledge Changes" rows={changeRows} />
-        <section className="panel surface availability-panel executive-availability-panel">
+        <section className="panel surface availability-panel">
           <div className="panel-header">
             <div className="panel-title-stack">
               <h3>Kernel Availability</h3>

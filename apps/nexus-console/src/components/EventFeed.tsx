@@ -23,7 +23,7 @@ export function EventFeed({ title, items, emptyMessage = "No events available." 
         <div className="event-list">
           {items.map((item) => (
             <article key={item.id} className="event-item">
-              <div className="event-rail" />
+              <div className={`event-rail tone-${item.tone ?? "idle"}`} />
               <div className="event-body">
                 <div className="event-title-line">
                   <strong>{item.eventName}</strong>

@@ -10,7 +10,9 @@ export function InfoPanel({ title, rows }: InfoPanelProps) {
   return (
     <section className="panel surface">
       <div className="panel-header">
-        <h3>{title}</h3>
+        <div className="panel-title-stack">
+          <h3>{title}</h3>
+        </div>
       </div>
       <div className="panel-rows">
         {rows.map((row) => (

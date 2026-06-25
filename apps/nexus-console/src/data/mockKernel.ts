@@ -78,18 +78,52 @@ export type KernelSnapshot = {
   settingsPage: PageData;
 };
 
-export const pageOrder: Array<{ id: NavPage; label: string; short: string }> = [
-  { id: "kernel", label: "Executive", short: "HOME" },
-  { id: "executive", label: "Governance", short: "GOV" },
-  { id: "missions", label: "Missions", short: "MSSN" },
-  { id: "agents", label: "Agents", short: "AGNT" },
-  { id: "tools", label: "Tools", short: "TOOL" },
-  { id: "conversations", label: "Conversations", short: "CONV" },
-  { id: "knowledge", label: "Knowledge", short: "KNOW" },
-  { id: "workspaces", label: "Workspaces", short: "WKSP" },
-  { id: "health", label: "Health", short: "HLTH" },
-  { id: "settings", label: "Settings", short: "SET" },
+export type NavItem = { id: NavPage; label: string; short: string };
+
+export type NavGroup = { id: string; label: string; items: NavItem[] };
+
+export const navGroups: NavGroup[] = [
+  {
+    id: "executive",
+    label: "Executive",
+    items: [
+      { id: "kernel", label: "Home", short: "HOME" },
+      { id: "executive", label: "Governance", short: "GOV" },
+    ],
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    items: [
+      { id: "missions", label: "Missions", short: "MSSN" },
+      { id: "agents", label: "Agents", short: "AGNT" },
+      { id: "tools", label: "Tools", short: "TOOL" },
+    ],
+  },
+  {
+    id: "memory",
+    label: "Memory",
+    items: [
+      { id: "conversations", label: "Conversations", short: "CONV" },
+      { id: "knowledge", label: "Knowledge", short: "KNOW" },
+    ],
+  },
+  {
+    id: "portfolio",
+    label: "Portfolio",
+    items: [{ id: "workspaces", label: "Workspaces", short: "WKSP" }],
+  },
+  {
+    id: "system",
+    label: "System",
+    items: [
+      { id: "health", label: "Health", short: "HLTH" },
+      { id: "settings", label: "Settings", short: "SET" },
+    ],
+  },
 ];
+
+export const pageOrder: NavItem[] = navGroups.flatMap((group) => group.items);
 
 export const mockKernel: KernelSnapshot = {
   kernelOverview: {
