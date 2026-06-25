@@ -5,16 +5,19 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from commandcore.agents import InMemoryAgentRuntime
+from commandcore.agents import AgentMissionAssignmentService, InMemoryAgentRuntime
 from commandcore.contracts import (
     Agent,
     AgentRuntimeStatus,
+    Mission,
+    MissionStatus,
     Ownership,
     OwnershipKind,
     PermissionLevel,
     Status,
 )
 from commandcore.events import InMemoryEventBus
+from commandcore.mission import MissionEngine
 from commandcore.registries import AgentRegistry
 
 
@@ -36,6 +39,20 @@ def make_agent(agent_id: str, *, runtime_status: AgentRuntimeStatus = AgentRunti
         runtime_status=runtime_status,
         permission_level=PermissionLevel.OPERATE,
         capability_ids=["cap-search"],
+    )
+
+
+def make_mission(mission_id: str) -> Mission:
+    return Mission(
+        id=mission_id,
+        title="Mission",
+        status=MissionStatus.REQUESTED,
+        ownership=make_ownership(),
+        requested_by="jarvis",
+        scope=["project:proj-jarvis"],
+        capability_ids=["cap-search"],
+        approval_required=True,
+        required_output="summary",
     )
 
 
@@ -126,3 +143,22 @@ def test_no_events_are_published_without_event_bus():
     runtime.complete_execution(execution.id)
 
     assert runtime.get_execution("exec-1").status == "completed"
+
+
+def test_runtime_works_with_mission_assignment_service_for_mission_execution_flow():
+    registry = AgentRegistry()
+    registry.register_agent(make_agent("agent-hermes"))
+    mission_engine = MissionEngine()
+    mission_engine.create_mission(make_mission("mission-1"))
+    runtime = InMemoryAgentRuntime(agent_registry=registry)
+    service = AgentMissionAssignmentService(
+        agent_runtime=runtime,
+        agent_registry=registry,
+        mission_engine=mission_engine,
+    )
+
+    assignment = service.assign_agent_to_mission("agent-hermes", "mission-1")
+    execution = service.start_mission_task_execution(assignment.id)
+    service.complete_mission_task_execution(execution.id, output_payload={"summary": "done"})
+
+    assert runtime.list_executions_for_mission("mission-1")[0].status == "completed"

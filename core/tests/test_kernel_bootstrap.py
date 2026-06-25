@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from commandcore.agents import InMemoryAgentRuntime
+from commandcore.agents import AgentMissionAssignmentService, InMemoryAgentRuntime
 from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
 from commandcore.audit import InMemoryAuditTrail
 from commandcore.conversations import InMemoryConversationEngine
@@ -12,6 +12,8 @@ from commandcore.contracts import (
     AgentRuntimeStatus,
     KnowledgeAsset,
     LifecycleState,
+    Mission,
+    MissionStatus,
     Ownership,
     OwnershipKind,
     PermissionLevel,
@@ -72,6 +74,20 @@ def make_agent(agent_id: str) -> Agent:
     )
 
 
+def make_mission(mission_id: str) -> Mission:
+    return Mission(
+        id=mission_id,
+        title=mission_id,
+        status=MissionStatus.REQUESTED,
+        ownership=make_ownership(),
+        requested_by="jarvis",
+        scope=["project:proj-jarvis"],
+        capability_ids=["cap-search"],
+        approval_required=True,
+        required_output="summary",
+    )
+
+
 def test_create_in_memory_kernel_returns_expected_component_types():
     kernel = create_in_memory_kernel()
 
@@ -86,6 +102,7 @@ def test_create_in_memory_kernel_returns_expected_component_types():
     assert isinstance(kernel.knowledge_engine, InMemoryKnowledgeEngine)
     assert isinstance(kernel.conversation_engine, InMemoryConversationEngine)
     assert isinstance(kernel.agent_runtime, InMemoryAgentRuntime)
+    assert isinstance(kernel.agent_mission_assignment_service, AgentMissionAssignmentService)
     assert isinstance(kernel.mission_engine, MissionEngine)
     assert isinstance(kernel.audit_trail, InMemoryAuditTrail)
     assert callable(kernel.health_snapshot_builder)
@@ -111,6 +128,10 @@ def test_create_in_memory_kernel_shares_one_event_bus_across_components():
     assert kernel.conversation_engine.knowledge_engine is kernel.knowledge_engine
     assert kernel.agent_runtime.event_bus is kernel.event_bus
     assert kernel.agent_runtime.agent_registry is kernel.agent_registry
+    assert kernel.agent_mission_assignment_service.agent_runtime is kernel.agent_runtime
+    assert kernel.agent_mission_assignment_service.agent_registry is kernel.agent_registry
+    assert kernel.agent_mission_assignment_service.mission_engine is kernel.mission_engine
+    assert kernel.agent_mission_assignment_service.event_bus is kernel.event_bus
     assert kernel.mission_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_gate.event_bus is kernel.event_bus
@@ -236,17 +257,23 @@ def test_conversation_events_flow_to_audit_trail_and_event_store():
 def test_agent_runtime_events_flow_to_audit_trail_and_event_store():
     kernel = create_in_memory_kernel()
     kernel.agent_registry.register_agent(make_agent("agent-hermes"))
-    assignment = kernel.agent_runtime.assign_agent(
-        assignment_id="assign-1",
-        agent_id="agent-hermes",
-        mission_id="mission-1",
+    kernel.mission_engine.create_mission(make_mission("mission-1"))
+    assignment = kernel.agent_mission_assignment_service.assign_agent_to_mission(
+        "agent-hermes",
+        "mission-1",
     )
-    execution = kernel.agent_runtime.start_execution(assignment.id, execution_id="exec-1")
-    kernel.agent_runtime.complete_execution(execution.id, output_payload={"summary": "done"})
+    execution = kernel.agent_mission_assignment_service.start_mission_task_execution(assignment.id)
+    kernel.agent_mission_assignment_service.complete_mission_task_execution(
+        execution.id,
+        output_payload={"summary": "done"},
+    )
 
     event_names = [event.payload["event_name"] for event in kernel.event_bus.list_events()]
     assert "AgentAssigned" in event_names
+    assert "AgentMissionAssigned" in event_names
     assert "AgentExecutionStarted" in event_names
+    assert "AgentMissionExecutionStarted" in event_names
     assert "AgentExecutionCompleted" in event_names
+    assert "AgentMissionExecutionCompleted" in event_names
     assert [stored.event for stored in kernel.event_store.read_all()] == kernel.event_bus.list_events()
     assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()

@@ -7,6 +7,8 @@ from commandcore.bootstrap import create_in_memory_kernel
 from commandcore.contracts import (
     Agent,
     AgentRuntimeStatus,
+    Mission,
+    MissionStatus,
     Ownership,
     OwnershipKind,
     PermissionLevel,
@@ -36,30 +38,44 @@ def make_agent(agent_id: str, *, runtime_status: AgentRuntimeStatus) -> Agent:
     )
 
 
+def make_mission(mission_id: str) -> Mission:
+    return Mission(
+        id=mission_id,
+        title=mission_id,
+        status=MissionStatus.REQUESTED,
+        ownership=make_ownership(),
+        requested_by="jarvis",
+        scope=["project:proj-jarvis"],
+        capability_ids=["cap-search"],
+        approval_required=True,
+        required_output="summary",
+    )
+
+
 def test_agent_dashboard_service_reports_counts_and_recent_activity():
     kernel = create_in_memory_kernel()
     kernel.agent_registry.register_agent(make_agent("agent-hermes", runtime_status=AgentRuntimeStatus.AVAILABLE))
     kernel.agent_registry.register_agent(make_agent("agent-athena", runtime_status=AgentRuntimeStatus.OFFLINE))
-    running_assignment = kernel.agent_runtime.assign_agent(
-        assignment_id="assign-1",
-        agent_id="agent-hermes",
-        mission_id="mission-1",
+    kernel.mission_engine.create_mission(make_mission("mission-1"))
+    kernel.mission_engine.create_mission(make_mission("mission-2"))
+    kernel.mission_engine.create_mission(make_mission("mission-3"))
+    running_assignment = kernel.agent_mission_assignment_service.assign_agent_to_mission(
+        "agent-hermes",
+        "mission-1",
     )
-    running_execution = kernel.agent_runtime.start_execution(running_assignment.id, execution_id="exec-1")
-    completed_assignment = kernel.agent_runtime.assign_agent(
-        assignment_id="assign-2",
-        agent_id="agent-hermes",
-        mission_id="mission-2",
+    running_execution = kernel.agent_mission_assignment_service.start_mission_task_execution(running_assignment.id)
+    completed_assignment = kernel.agent_mission_assignment_service.assign_agent_to_mission(
+        "agent-hermes",
+        "mission-2",
     )
-    completed_execution = kernel.agent_runtime.start_execution(completed_assignment.id, execution_id="exec-2")
-    kernel.agent_runtime.complete_execution(completed_execution.id, output_payload={"summary": "done"})
-    failed_assignment = kernel.agent_runtime.assign_agent(
-        assignment_id="assign-3",
-        agent_id="agent-hermes",
-        mission_id="mission-3",
+    completed_execution = kernel.agent_mission_assignment_service.start_mission_task_execution(completed_assignment.id)
+    kernel.agent_mission_assignment_service.complete_mission_task_execution(completed_execution.id, output_payload={"summary": "done"})
+    failed_assignment = kernel.agent_mission_assignment_service.assign_agent_to_mission(
+        "agent-hermes",
+        "mission-3",
     )
-    failed_execution = kernel.agent_runtime.start_execution(failed_assignment.id, execution_id="exec-3")
-    kernel.agent_runtime.fail_execution(failed_execution.id, error="blocked")
+    failed_execution = kernel.agent_mission_assignment_service.start_mission_task_execution(failed_assignment.id)
+    kernel.agent_mission_assignment_service.fail_mission_task_execution(failed_execution.id, error="blocked")
 
     dashboard = AgentDashboardService(
         agent_registry=kernel.agent_registry,
@@ -80,15 +96,24 @@ def test_agent_dashboard_service_reports_counts_and_recent_activity():
         "completed": 1,
         "failed": 1,
     }
+    assert dashboard.mission_assignment_counts() == {
+        "total": 3,
+        "distinct_missions": 3,
+    }
     assert dashboard.execution_counts() == {
         "total": 3,
         "running": 1,
         "completed": 1,
         "failed": 1,
     }
+    assert dashboard.executions_by_mission() == {
+        "mission-1": {"total": 1, "running": 1, "completed": 0, "failed": 0},
+        "mission-2": {"total": 1, "running": 0, "completed": 1, "failed": 0},
+        "mission-3": {"total": 1, "running": 0, "completed": 0, "failed": 1},
+    }
     assert [item["execution_id"] for item in dashboard.active_executions()] == [running_execution.id]
     assert [item["execution_id"] for item in dashboard.completed_executions()] == [completed_execution.id]
     assert [item["execution_id"] for item in dashboard.failed_executions()] == [failed_execution.id]
-    assert any(event["event_name"] == "AgentExecutionCompleted" for event in dashboard.recent_agent_activity())
+    assert any(event["event_name"] == "AgentMissionExecutionCompleted" for event in dashboard.recent_agent_activity())
     built = dashboard.build_dashboard()
     assert built["execution_counts"]["failed"] == 1

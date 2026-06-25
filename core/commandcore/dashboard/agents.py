@@ -13,6 +13,10 @@ AGENT_ACTIVITY_EVENTS = {
     "AgentExecutionStarted",
     "AgentExecutionCompleted",
     "AgentExecutionFailed",
+    "AgentMissionAssigned",
+    "AgentMissionExecutionStarted",
+    "AgentMissionExecutionCompleted",
+    "AgentMissionExecutionFailed",
 }
 
 
@@ -49,6 +53,15 @@ class AgentDashboardService:
             "failed": len([item for item in assignments if item.status == "failed"]),
         }
 
+    def mission_assignment_counts(self) -> dict[str, int]:
+        assignments = [
+            item for item in self.agent_runtime.list_assignments() if item.mission_id is not None
+        ]
+        return {
+            "total": len(assignments),
+            "distinct_missions": len({item.mission_id for item in assignments}),
+        }
+
     def execution_counts(self) -> dict[str, int]:
         executions = self.agent_runtime.list_executions()
         return {
@@ -57,6 +70,20 @@ class AgentDashboardService:
             "completed": len([item for item in executions if item.status == "completed"]),
             "failed": len([item for item in executions if item.status == "failed"]),
         }
+
+    def executions_by_mission(self) -> dict[str, dict[str, int]]:
+        summary: dict[str, dict[str, int]] = {}
+        for execution in self.agent_runtime.list_executions():
+            if execution.mission_id is None:
+                continue
+            mission_counts = summary.setdefault(
+                execution.mission_id,
+                {"total": 0, "running": 0, "completed": 0, "failed": 0},
+            )
+            mission_counts["total"] += 1
+            if execution.status in mission_counts:
+                mission_counts[execution.status] += 1
+        return summary
 
     def active_executions(self) -> list[dict[str, object]]:
         return [
@@ -91,7 +118,9 @@ class AgentDashboardService:
         return {
             "agent_counts": self.agent_counts(),
             "assignment_counts": self.assignment_counts(),
+            "mission_assignment_counts": self.mission_assignment_counts(),
             "execution_counts": self.execution_counts(),
+            "executions_by_mission": self.executions_by_mission(),
             "active_executions": self.active_executions(),
             "completed_executions": self.completed_executions(),
             "failed_executions": self.failed_executions(),

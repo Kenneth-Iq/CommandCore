@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from commandcore.agents import InMemoryAgentRuntime
 from commandcore.audit import InMemoryAuditTrail
 from commandcore.contracts import MissionStatus
 from commandcore.events import Event
@@ -20,6 +21,10 @@ MISSION_ACTIVITY_EVENTS = {
     "ExecutiveMissionCreated",
     "ExecutiveMissionCompleted",
     "ExecutiveMissionFailed",
+    "AgentMissionAssigned",
+    "AgentMissionExecutionStarted",
+    "AgentMissionExecutionCompleted",
+    "AgentMissionExecutionFailed",
 }
 
 ACTIVE_MISSION_STATUSES = {
@@ -36,6 +41,7 @@ class MissionDashboardService:
 
     mission_engine: MissionEngine
     audit_trail: InMemoryAuditTrail
+    agent_runtime: InMemoryAgentRuntime | None = None
 
     def mission_counts(self) -> dict[str, int]:
         missions = self.mission_engine.list_missions()
@@ -45,6 +51,24 @@ class MissionDashboardService:
             "completed": len([mission for mission in missions if mission.status == MissionStatus.COMPLETED]),
             "failed": len([mission for mission in missions if mission.status == MissionStatus.FAILED]),
         }
+
+    def assigned_agent_count(self) -> int:
+        if self.agent_runtime is None:
+            return 0
+        return len({
+            assignment.agent_id
+            for assignment in self.agent_runtime.list_assignments()
+            if assignment.mission_id is not None
+        })
+
+    def active_agent_executions(self) -> list[dict[str, object]]:
+        return self._mission_execution_summary("running")
+
+    def completed_agent_executions(self) -> list[dict[str, object]]:
+        return self._mission_execution_summary("completed")
+
+    def failed_agent_executions(self) -> list[dict[str, object]]:
+        return self._mission_execution_summary("failed")
 
     def active_missions(self) -> list[dict[str, object]]:
         return [
@@ -90,6 +114,10 @@ class MissionDashboardService:
     def build_dashboard(self) -> dict[str, object]:
         return {
             "mission_counts": self.mission_counts(),
+            "assigned_agent_count": self.assigned_agent_count(),
+            "active_agent_executions": self.active_agent_executions(),
+            "completed_agent_executions": self.completed_agent_executions(),
+            "failed_agent_executions": self.failed_agent_executions(),
             "active_missions": self.active_missions(),
             "completed_missions": self.completed_missions(),
             "failed_missions": self.failed_missions(),
@@ -111,6 +139,24 @@ class MissionDashboardService:
             "result_summary": self.mission_engine.get_result_summary(mission_id),
             "failure_reason": self.mission_engine.get_failure_reason(mission_id),
         }
+
+    def _mission_execution_summary(self, status: str) -> list[dict[str, object]]:
+        if self.agent_runtime is None:
+            return []
+        return [
+            {
+                "execution_id": execution.id,
+                "assignment_id": execution.assignment_id,
+                "agent_id": execution.agent_id,
+                "mission_id": execution.mission_id,
+                "task_id": execution.task_id,
+                "capability_id": execution.capability_id,
+                "status": execution.status,
+                "error": execution.error,
+            }
+            for execution in self.agent_runtime.list_executions()
+            if execution.mission_id is not None and execution.status == status
+        ]
 
     @staticmethod
     def _serialize_event(event: Event) -> dict[str, object]:

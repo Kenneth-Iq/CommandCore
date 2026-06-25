@@ -31,6 +31,7 @@ class KernelOverviewDashboardService:
         return MissionDashboardService(
             mission_engine=self.kernel.mission_engine,
             audit_trail=self.kernel.audit_trail,
+            agent_runtime=getattr(self.kernel, "agent_runtime", None),
         ).build_dashboard()
 
     def workspace_dashboard(self) -> dict[str, object]:

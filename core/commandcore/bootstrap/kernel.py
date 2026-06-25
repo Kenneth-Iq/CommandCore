@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from commandcore.agents import InMemoryAgentRuntime
+from commandcore.agents import AgentMissionAssignmentService, InMemoryAgentRuntime
 from commandcore.audit import InMemoryAuditTrail, attach_audit_trail
 from commandcore.conversations import InMemoryConversationEngine
 from commandcore.events import InMemoryEventBus
@@ -44,6 +44,7 @@ class CommandCoreKernel:
     knowledge_engine: InMemoryKnowledgeEngine
     conversation_engine: InMemoryConversationEngine
     agent_runtime: InMemoryAgentRuntime
+    agent_mission_assignment_service: AgentMissionAssignmentService
     mission_engine: MissionEngine
     audit_trail: InMemoryAuditTrail
     health_snapshot_builder: Callable[["CommandCoreKernel"], dict[str, object]]
@@ -75,6 +76,12 @@ def create_in_memory_kernel() -> CommandCoreKernel:
         agent_registry=agent_registry,
     )
     mission_engine = MissionEngine(event_bus=event_bus)
+    agent_mission_assignment_service = AgentMissionAssignmentService(
+        agent_runtime=agent_runtime,
+        agent_registry=agent_registry,
+        mission_engine=mission_engine,
+        event_bus=event_bus,
+    )
     executive_policy_engine = ExecutivePolicyEngine(event_bus=event_bus)
     executive_policy_gate = ExecutivePolicyGate(
         policy_engine=executive_policy_engine,
@@ -100,6 +107,7 @@ def create_in_memory_kernel() -> CommandCoreKernel:
         knowledge_engine=knowledge_engine,
         conversation_engine=conversation_engine,
         agent_runtime=agent_runtime,
+        agent_mission_assignment_service=agent_mission_assignment_service,
         mission_engine=mission_engine,
         audit_trail=audit_trail,
         health_snapshot_builder=build_kernel_health_snapshot,
