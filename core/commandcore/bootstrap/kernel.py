@@ -28,6 +28,7 @@ from commandcore.registries import (
     ProjectRegistry,
     WorkspaceRegistry,
 )
+from commandcore.tools import InMemoryToolRegistry, InMemoryToolRuntime
 
 
 @dataclass(slots=True)
@@ -45,6 +46,8 @@ class CommandCoreKernel:
     conversation_engine: InMemoryConversationEngine
     agent_runtime: InMemoryAgentRuntime
     agent_mission_assignment_service: AgentMissionAssignmentService
+    tool_registry: InMemoryToolRegistry
+    tool_runtime: InMemoryToolRuntime
     mission_engine: MissionEngine
     audit_trail: InMemoryAuditTrail
     health_snapshot_builder: Callable[["CommandCoreKernel"], dict[str, object]]
@@ -74,6 +77,11 @@ def create_in_memory_kernel() -> CommandCoreKernel:
     agent_runtime = InMemoryAgentRuntime(
         event_bus=event_bus,
         agent_registry=agent_registry,
+    )
+    tool_registry = InMemoryToolRegistry(event_bus=event_bus)
+    tool_runtime = InMemoryToolRuntime(
+        tool_registry=tool_registry,
+        event_bus=event_bus,
     )
     mission_engine = MissionEngine(event_bus=event_bus)
     agent_mission_assignment_service = AgentMissionAssignmentService(
@@ -108,6 +116,8 @@ def create_in_memory_kernel() -> CommandCoreKernel:
         conversation_engine=conversation_engine,
         agent_runtime=agent_runtime,
         agent_mission_assignment_service=agent_mission_assignment_service,
+        tool_registry=tool_registry,
+        tool_runtime=tool_runtime,
         mission_engine=mission_engine,
         audit_trail=audit_trail,
         health_snapshot_builder=build_kernel_health_snapshot,

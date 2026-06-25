@@ -5,6 +5,7 @@ from .conversations import ConversationDashboardService
 from .executive import ExecutiveDashboardService
 from .kernel import KernelOverviewDashboardService
 from .missions import MissionDashboardService
+from .tools import ToolDashboardService
 from .workspaces import WorkspaceDashboardService
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "ExecutiveDashboardService",
     "KernelOverviewDashboardService",
     "MissionDashboardService",
+    "ToolDashboardService",
     "WorkspaceDashboardService",
 ]

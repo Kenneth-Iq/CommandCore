@@ -4,8 +4,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from commandcore.agents import AgentMissionAssignmentService, InMemoryAgentRuntime
-from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
 from commandcore.audit import InMemoryAuditTrail
+from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
 from commandcore.conversations import InMemoryConversationEngine
 from commandcore.contracts import (
     Agent,
@@ -40,6 +40,7 @@ from commandcore.registries import (
     ProjectRegistry,
     WorkspaceRegistry,
 )
+from commandcore.tools import InMemoryToolRegistry, InMemoryToolRuntime, ToolPermission
 
 
 def make_objective(objective_id: str) -> Objective:
@@ -103,6 +104,8 @@ def test_create_in_memory_kernel_returns_expected_component_types():
     assert isinstance(kernel.conversation_engine, InMemoryConversationEngine)
     assert isinstance(kernel.agent_runtime, InMemoryAgentRuntime)
     assert isinstance(kernel.agent_mission_assignment_service, AgentMissionAssignmentService)
+    assert isinstance(kernel.tool_registry, InMemoryToolRegistry)
+    assert isinstance(kernel.tool_runtime, InMemoryToolRuntime)
     assert isinstance(kernel.mission_engine, MissionEngine)
     assert isinstance(kernel.audit_trail, InMemoryAuditTrail)
     assert callable(kernel.health_snapshot_builder)
@@ -132,6 +135,9 @@ def test_create_in_memory_kernel_shares_one_event_bus_across_components():
     assert kernel.agent_mission_assignment_service.agent_registry is kernel.agent_registry
     assert kernel.agent_mission_assignment_service.mission_engine is kernel.mission_engine
     assert kernel.agent_mission_assignment_service.event_bus is kernel.event_bus
+    assert kernel.tool_registry.event_bus is kernel.event_bus
+    assert kernel.tool_runtime.tool_registry is kernel.tool_registry
+    assert kernel.tool_runtime.event_bus is kernel.event_bus
     assert kernel.mission_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_gate.event_bus is kernel.event_bus
@@ -275,5 +281,34 @@ def test_agent_runtime_events_flow_to_audit_trail_and_event_store():
     assert "AgentMissionExecutionStarted" in event_names
     assert "AgentExecutionCompleted" in event_names
     assert "AgentMissionExecutionCompleted" in event_names
+    assert [stored.event for stored in kernel.event_store.read_all()] == kernel.event_bus.list_events()
+    assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()
+
+
+def test_tool_runtime_events_flow_to_audit_trail_and_event_store():
+    kernel = create_in_memory_kernel()
+    tool = kernel.tool_registry.register_tool(
+        tool_id="tool-1",
+        name="Knowledge Search",
+        description="Search knowledge assets.",
+        permission_level=ToolPermission.SAFE,
+        agent_id="agent-hermes",
+    )
+    invocation = kernel.tool_runtime.create_invocation(
+        tool.id,
+        invocation_id="invoke-1",
+        input_payload={"query": "launch"},
+    )
+    kernel.tool_runtime.start_invocation(invocation.id)
+    kernel.tool_runtime.complete_invocation(
+        invocation.id,
+        output_payload={"matches": 1},
+    )
+
+    event_names = [event.payload["event_name"] for event in kernel.event_bus.list_events()]
+    assert "ToolRegistered" in event_names
+    assert "ToolInvocationCreated" in event_names
+    assert "ToolInvocationStarted" in event_names
+    assert "ToolInvocationCompleted" in event_names
     assert [stored.event for stored in kernel.event_store.read_all()] == kernel.event_bus.list_events()
     assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()

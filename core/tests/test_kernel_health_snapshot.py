@@ -23,6 +23,7 @@ from commandcore.contracts import (
 )
 from commandcore.executive import Objective, PolicyDecision, PolicyRule
 from commandcore.health import build_kernel_health_snapshot
+from commandcore.tools import ToolPermission
 
 
 def make_ownership() -> Ownership:
@@ -124,6 +125,21 @@ def test_build_kernel_health_snapshot_counts_core_components():
             required_output="Cited review summary",
         )
     )
+    tool = kernel.tool_registry.register_tool(
+        tool_id="tool-search",
+        name="Knowledge Search",
+        description="Search knowledge assets.",
+        capability_id="cap-search",
+        agent_id="agent-hermes",
+        permission_level=ToolPermission.SAFE,
+    )
+    invocation = kernel.tool_runtime.create_invocation(
+        tool.id,
+        invocation_id="invoke-1",
+        input_payload={"query": "runbook"},
+    )
+    kernel.tool_runtime.start_invocation(invocation.id)
+    kernel.tool_runtime.complete_invocation(invocation.id, output_payload={"matches": 1})
     kernel.executive_runtime.submit_objective(
         Objective(
             id="obj-1",
@@ -163,6 +179,10 @@ def test_build_kernel_health_snapshot_counts_core_components():
     assert snapshot["agent_runtime_available"] is True
     assert snapshot["agent_assignment_count"] == 1
     assert snapshot["agent_execution_count"] == 1
+    assert snapshot["tool_registry_available"] is True
+    assert snapshot["tool_runtime_available"] is True
+    assert snapshot["tool_count"] == 1
+    assert snapshot["tool_invocation_count"] == 1
     assert snapshot["executive_objective_count"] == 1
     assert snapshot["policy_rule_count"] == 1
     assert snapshot["executive_report_available"] is True

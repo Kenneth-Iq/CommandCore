@@ -18,6 +18,7 @@ from commandcore.contracts import (
 )
 from commandcore.executive import Objective, PolicyDecision, PolicyRule
 from commandcore.health import build_kernel_readiness_report
+from commandcore.tools import ToolPermission
 
 
 def make_ownership() -> Ownership:
@@ -50,12 +51,18 @@ def test_build_kernel_readiness_report_returns_warning_for_empty_kernel():
     assert report["checks"]["event_bus"] is True
     assert report["checks"]["event_store"] is True
     assert report["checks"]["agent_runtime"] is True
+    assert report["checks"]["tool_registry"] is True
+    assert report["checks"]["tool_runtime"] is True
     assert report["checks"]["dashboards"] is True
     assert report["blocking_issues"] == []
     assert "No workspaces are registered in the kernel." in report["warnings"]
+    assert "No tools are registered in the kernel." in report["warnings"]
+    assert "No tool invocations have been created in the kernel." in report["warnings"]
     assert report["summary_counts"]["event_store_event_count"] == 0
     assert report["summary_counts"]["agent_assignment_count"] == 0
     assert report["summary_counts"]["agent_execution_count"] == 0
+    assert report["summary_counts"]["tool_count"] == 0
+    assert report["summary_counts"]["tool_invocation_count"] == 0
     assert report["summary_counts"]["workspace_count"] == 0
 
 
@@ -77,6 +84,20 @@ def test_build_kernel_readiness_report_returns_ready_for_populated_kernel():
     )
     execution = kernel.agent_runtime.start_execution(assignment.id, execution_id="exec-1")
     kernel.agent_runtime.complete_execution(execution.id, output_payload={"summary": "done"})
+    tool = kernel.tool_registry.register_tool(
+        tool_id="tool-search",
+        name="Knowledge Search",
+        description="Search knowledge assets.",
+        permission_level=ToolPermission.SAFE,
+        agent_id="agent-hermes",
+    )
+    invocation = kernel.tool_runtime.create_invocation(
+        tool.id,
+        invocation_id="invoke-1",
+        input_payload={"query": "runbook"},
+    )
+    kernel.tool_runtime.start_invocation(invocation.id)
+    kernel.tool_runtime.complete_invocation(invocation.id, output_payload={"matches": 1})
     kernel.knowledge_engine.add_asset(
         KnowledgeAsset(
             id="know-runbook",
@@ -120,6 +141,8 @@ def test_build_kernel_readiness_report_returns_ready_for_populated_kernel():
     assert report["summary_counts"]["mission_count"] == 1
     assert report["summary_counts"]["agent_assignment_count"] == 1
     assert report["summary_counts"]["agent_execution_count"] == 1
+    assert report["summary_counts"]["tool_count"] == 1
+    assert report["summary_counts"]["tool_invocation_count"] == 1
     assert report["summary_counts"]["executive_objective_count"] == 1
     assert report["summary_counts"]["event_store_event_count"] == len(kernel.event_store.read_all())
     assert report["dashboard_availability"]["executive_reporting"] is True

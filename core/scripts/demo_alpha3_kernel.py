@@ -27,6 +27,7 @@ from commandcore.contracts import (
 from commandcore.dashboard import KernelOverviewDashboardService
 from commandcore.executive import Objective, PolicyDecision, PolicyRule
 from commandcore.health import build_kernel_readiness_report
+from commandcore.tools import ToolPermission
 
 
 def make_ownership() -> Ownership:
@@ -151,6 +152,25 @@ def run_demo() -> dict[str, object]:
     kernel.agent_runtime.complete_execution(
         execution.id,
         output_payload={"summary": "Alpha-3 demo runtime execution completed."},
+    )
+
+    tool = kernel.tool_registry.register_tool(
+        tool_id="tool-alpha3-search",
+        name="Knowledge Search",
+        description="Search launch knowledge for the demo.",
+        capability_id="cap-search",
+        agent_id="agent-hermes",
+        permission_level=ToolPermission.SAFE,
+    )
+    tool_invocation = kernel.tool_runtime.create_invocation(
+        tool.id,
+        invocation_id="invoke-alpha3-demo",
+        input_payload={"query": "launch readiness"},
+    )
+    kernel.tool_runtime.start_invocation(tool_invocation.id)
+    kernel.tool_runtime.complete_invocation(
+        tool_invocation.id,
+        output_payload={"matches": 1, "summary": "Alpha-3 demo tool invocation completed."},
     )
 
     dashboard_summary = KernelOverviewDashboardService(kernel).build_overview()

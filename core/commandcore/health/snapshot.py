@@ -13,6 +13,8 @@ def build_kernel_health_snapshot(kernel: "CommandCoreKernel") -> dict[str, objec
 
     event_store = getattr(kernel, "event_store", None)
     agent_runtime = getattr(kernel, "agent_runtime", None)
+    tool_registry = getattr(kernel, "tool_registry", None)
+    tool_runtime = getattr(kernel, "tool_runtime", None)
     return {
         "event_count": len(kernel.event_bus.list_events()),
         "event_store_available": event_store is not None,
@@ -30,6 +32,10 @@ def build_kernel_health_snapshot(kernel: "CommandCoreKernel") -> dict[str, objec
         "agent_runtime_available": agent_runtime is not None,
         "agent_assignment_count": len(agent_runtime.list_assignments()) if agent_runtime is not None else 0,
         "agent_execution_count": len(agent_runtime.list_executions()) if agent_runtime is not None else 0,
+        "tool_registry_available": tool_registry is not None,
+        "tool_runtime_available": tool_runtime is not None,
+        "tool_count": len(tool_registry.list_tools()) if tool_registry is not None else 0,
+        "tool_invocation_count": len(tool_runtime.list_invocations()) if tool_runtime is not None else 0,
         "executive_objective_count": len(kernel.executive_runtime.list_objectives()),
         "policy_rule_count": len(kernel.executive_policy_engine.list_rules()),
         "executive_report_available": kernel.executive_reporting is not None,

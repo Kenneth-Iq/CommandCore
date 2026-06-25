@@ -18,6 +18,7 @@ from commandcore.contracts import (
 )
 from commandcore.dashboard import KernelOverviewDashboardService
 from commandcore.executive import Objective, PolicyDecision, PolicyRule
+from commandcore.tools import ToolPermission
 
 
 def make_ownership() -> Ownership:
@@ -80,6 +81,19 @@ def test_kernel_overview_dashboard_service_aggregates_all_sections():
         mission_id="mission-1",
     )
     kernel.agent_runtime.start_execution(assignment.id, execution_id="exec-1")
+    tool = kernel.tool_registry.register_tool(
+        tool_id="tool-search",
+        name="Knowledge Search",
+        description="Search knowledge assets.",
+        permission_level=ToolPermission.SAFE,
+        agent_id="agent-hermes",
+    )
+    tool_invocation = kernel.tool_runtime.create_invocation(
+        tool.id,
+        invocation_id="invoke-1",
+        input_payload={"query": "overview"},
+    )
+    kernel.tool_runtime.start_invocation(tool_invocation.id)
     conversation = kernel.conversation_engine.create_conversation(
         conversation_id="conv-1",
         workspace_id="ws-local",
@@ -123,6 +137,8 @@ def test_kernel_overview_dashboard_service_aggregates_all_sections():
     assert overview["agent_dashboard"]["agent_counts"]["total"] == 1
     assert overview["agent_dashboard"]["assignment_counts"]["running"] == 1
     assert overview["agent_dashboard"]["execution_counts"]["running"] == 1
+    assert overview["tool_dashboard"]["tool_counts"] == {"total": 1, "registered": 1}
+    assert overview["tool_dashboard"]["invocation_counts"]["running"] == 1
     assert overview["knowledge_counts"] == {"asset_count": 1, "relationship_count": 0}
     assert overview["health_snapshot"]["executive_report_available"] is True
     assert overview["audit_summary"]["entry_count"] == len(kernel.audit_trail.list_entries())

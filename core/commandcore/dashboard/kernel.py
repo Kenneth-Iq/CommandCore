@@ -11,6 +11,7 @@ from .agents import AgentDashboardService
 from .conversations import ConversationDashboardService
 from .executive import ExecutiveDashboardService
 from .missions import MissionDashboardService
+from .tools import ToolDashboardService
 from .workspaces import WorkspaceDashboardService
 
 
@@ -60,6 +61,17 @@ class KernelOverviewDashboardService:
             audit_trail=self.kernel.audit_trail,
         ).build_dashboard()
 
+    def tool_dashboard(self) -> dict[str, object] | None:
+        tool_registry = getattr(self.kernel, "tool_registry", None)
+        tool_runtime = getattr(self.kernel, "tool_runtime", None)
+        if tool_registry is None or tool_runtime is None:
+            return None
+        return ToolDashboardService(
+            tool_registry=tool_registry,
+            tool_runtime=tool_runtime,
+            audit_trail=self.kernel.audit_trail,
+        ).build_dashboard()
+
     def knowledge_counts(self) -> dict[str, int]:
         relationships = {
             (
@@ -103,6 +115,7 @@ class KernelOverviewDashboardService:
             "workspace_dashboard": self.workspace_dashboard(),
             "conversation_dashboard": self.conversation_dashboard(),
             "agent_dashboard": self.agent_dashboard(),
+            "tool_dashboard": self.tool_dashboard(),
             "knowledge_counts": self.knowledge_counts(),
             "health_snapshot": self.kernel.health_snapshot_builder(self.kernel),
             "audit_summary": self.audit_summary(),
