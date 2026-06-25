@@ -9,3 +9,8 @@ docker/.env
 .env
 *.db
 core/.venv/
+
+# Nexus Console local/generated files
+apps/nexus-console/node_modules/
+apps/nexus-console/dist/
+apps/nexus-console/*.tsbuildinfo
