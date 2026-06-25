@@ -4,7 +4,18 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from commandcore.bootstrap import create_in_memory_kernel
-from commandcore.contracts import KnowledgeAsset, LifecycleState, MissionStatus, Ownership, OwnershipKind, Status, Workspace
+from commandcore.contracts import (
+    Agent,
+    AgentRuntimeStatus,
+    KnowledgeAsset,
+    LifecycleState,
+    MissionStatus,
+    Ownership,
+    OwnershipKind,
+    PermissionLevel,
+    Status,
+    Workspace,
+)
 from commandcore.dashboard import KernelOverviewDashboardService
 from commandcore.executive import Objective, PolicyDecision, PolicyRule
 
@@ -25,6 +36,19 @@ def make_objective(objective_id: str, *, title: str, priority: str = "normal") -
         requested_by="jarvis",
         scope=["company:mindx", "project:proj-commandcore"],
         priority=priority,
+    )
+
+
+def make_agent(agent_id: str) -> Agent:
+    return Agent(
+        id=agent_id,
+        name="Hermes Worker",
+        role="engineering",
+        status=Status.ACTIVE,
+        ownership=make_ownership(),
+        runtime_status=AgentRuntimeStatus.AVAILABLE,
+        permission_level=PermissionLevel.OPERATE,
+        capability_ids=["cap-search"],
     )
 
 
@@ -49,6 +73,13 @@ def test_kernel_overview_dashboard_service_aggregates_all_sections():
             safe_to_query=True,
         )
     )
+    kernel.agent_registry.register_agent(make_agent("agent-hermes"))
+    assignment = kernel.agent_runtime.assign_agent(
+        assignment_id="assign-1",
+        agent_id="agent-hermes",
+        mission_id="mission-1",
+    )
+    kernel.agent_runtime.start_execution(assignment.id, execution_id="exec-1")
     conversation = kernel.conversation_engine.create_conversation(
         conversation_id="conv-1",
         workspace_id="ws-local",
@@ -89,8 +120,9 @@ def test_kernel_overview_dashboard_service_aggregates_all_sections():
     assert overview["mission_dashboard"]["mission_counts"]["completed"] == 1
     assert overview["workspace_dashboard"]["workspace_counts"]["total"] == 1
     assert overview["conversation_dashboard"]["conversation_counts"] == {"total": 1}
-    assert overview["conversation_dashboard"]["thread_counts"] == {"total": 1}
-    assert overview["conversation_dashboard"]["message_counts"] == {"total": 1}
+    assert overview["agent_dashboard"]["agent_counts"]["total"] == 1
+    assert overview["agent_dashboard"]["assignment_counts"]["running"] == 1
+    assert overview["agent_dashboard"]["execution_counts"]["running"] == 1
     assert overview["knowledge_counts"] == {"asset_count": 1, "relationship_count": 0}
     assert overview["health_snapshot"]["executive_report_available"] is True
     assert overview["audit_summary"]["entry_count"] == len(kernel.audit_trail.list_entries())

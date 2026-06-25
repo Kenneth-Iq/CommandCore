@@ -24,6 +24,7 @@ def build_kernel_readiness_report(kernel: object) -> dict[str, object]:
         ),
         "knowledge_engine": getattr(kernel, "knowledge_engine", None) is not None,
         "mission_engine": getattr(kernel, "mission_engine", None) is not None,
+        "agent_runtime": getattr(kernel, "agent_runtime", None) is not None,
         "executive_runtime": getattr(kernel, "executive_runtime", None) is not None,
         "policy_gate": getattr(kernel, "executive_policy_gate", None) is not None,
         "state_store": getattr(kernel, "executive_state_store", None) is not None,
@@ -56,6 +57,8 @@ def build_kernel_readiness_report(kernel: object) -> dict[str, object]:
         "project_count": len(kernel.project_registry.list_projects()) if getattr(kernel, "project_registry", None) is not None else 0,
         "knowledge_asset_count": len(kernel.knowledge_engine.list_assets()) if checks["knowledge_engine"] else 0,
         "mission_count": len(kernel.mission_engine.list_missions()) if checks["mission_engine"] else 0,
+        "agent_assignment_count": len(kernel.agent_runtime.list_assignments()) if checks["agent_runtime"] else 0,
+        "agent_execution_count": len(kernel.agent_runtime.list_executions()) if checks["agent_runtime"] else 0,
         "executive_objective_count": len(kernel.executive_runtime.list_objectives()) if checks["executive_runtime"] else 0,
         "policy_rule_count": len(kernel.executive_policy_engine.list_rules()) if getattr(kernel, "executive_policy_engine", None) is not None else 0,
     }
@@ -70,6 +73,10 @@ def build_kernel_readiness_report(kernel: object) -> dict[str, object]:
         warnings.append("No knowledge assets are stored in the kernel.")
     if summary_counts["mission_count"] == 0:
         warnings.append("No missions have been created in the kernel.")
+    if summary_counts["agent_assignment_count"] == 0:
+        warnings.append("No agent assignments have been created in the kernel.")
+    if summary_counts["agent_execution_count"] == 0:
+        warnings.append("No agent executions have been started in the kernel.")
     if summary_counts["executive_objective_count"] == 0:
         warnings.append("No executive objectives have been submitted in the kernel.")
     if summary_counts["policy_rule_count"] == 0:

@@ -4,7 +4,18 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from commandcore.bootstrap import create_in_memory_kernel
-from commandcore.contracts import KnowledgeAsset, LifecycleState, MissionStatus, Ownership, OwnershipKind, Status, Workspace
+from commandcore.contracts import (
+    Agent,
+    AgentRuntimeStatus,
+    KnowledgeAsset,
+    LifecycleState,
+    MissionStatus,
+    Ownership,
+    OwnershipKind,
+    PermissionLevel,
+    Status,
+    Workspace,
+)
 from commandcore.executive import Objective, PolicyDecision, PolicyRule
 from commandcore.health import build_kernel_readiness_report
 
@@ -17,6 +28,19 @@ def make_ownership() -> Ownership:
     )
 
 
+def make_agent(agent_id: str) -> Agent:
+    return Agent(
+        id=agent_id,
+        name="Hermes Worker",
+        role="engineering",
+        status=Status.ACTIVE,
+        ownership=make_ownership(),
+        runtime_status=AgentRuntimeStatus.AVAILABLE,
+        permission_level=PermissionLevel.OPERATE,
+        capability_ids=["cap-search"],
+    )
+
+
 def test_build_kernel_readiness_report_returns_warning_for_empty_kernel():
     kernel = create_in_memory_kernel()
 
@@ -25,10 +49,13 @@ def test_build_kernel_readiness_report_returns_warning_for_empty_kernel():
     assert report["status"] == "warning"
     assert report["checks"]["event_bus"] is True
     assert report["checks"]["event_store"] is True
+    assert report["checks"]["agent_runtime"] is True
     assert report["checks"]["dashboards"] is True
     assert report["blocking_issues"] == []
     assert "No workspaces are registered in the kernel." in report["warnings"]
     assert report["summary_counts"]["event_store_event_count"] == 0
+    assert report["summary_counts"]["agent_assignment_count"] == 0
+    assert report["summary_counts"]["agent_execution_count"] == 0
     assert report["summary_counts"]["workspace_count"] == 0
 
 
@@ -42,6 +69,14 @@ def test_build_kernel_readiness_report_returns_ready_for_populated_kernel():
             ownership=make_ownership(),
         )
     )
+    kernel.agent_registry.register_agent(make_agent("agent-hermes"))
+    assignment = kernel.agent_runtime.assign_agent(
+        assignment_id="assign-1",
+        agent_id="agent-hermes",
+        mission_id="mission-1",
+    )
+    execution = kernel.agent_runtime.start_execution(assignment.id, execution_id="exec-1")
+    kernel.agent_runtime.complete_execution(execution.id, output_payload={"summary": "done"})
     kernel.knowledge_engine.add_asset(
         KnowledgeAsset(
             id="know-runbook",
@@ -83,6 +118,8 @@ def test_build_kernel_readiness_report_returns_ready_for_populated_kernel():
     assert report["blocking_issues"] == []
     assert report["summary_counts"]["workspace_count"] == 1
     assert report["summary_counts"]["mission_count"] == 1
+    assert report["summary_counts"]["agent_assignment_count"] == 1
+    assert report["summary_counts"]["agent_execution_count"] == 1
     assert report["summary_counts"]["executive_objective_count"] == 1
     assert report["summary_counts"]["event_store_event_count"] == len(kernel.event_store.read_all())
     assert report["dashboard_availability"]["executive_reporting"] is True

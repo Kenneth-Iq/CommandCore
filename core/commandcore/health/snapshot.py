@@ -12,6 +12,7 @@ def build_kernel_health_snapshot(kernel: "CommandCoreKernel") -> dict[str, objec
     """Build a point-in-time health snapshot from the in-memory kernel."""
 
     event_store = getattr(kernel, "event_store", None)
+    agent_runtime = getattr(kernel, "agent_runtime", None)
     return {
         "event_count": len(kernel.event_bus.list_events()),
         "event_store_available": event_store is not None,
@@ -26,6 +27,9 @@ def build_kernel_health_snapshot(kernel: "CommandCoreKernel") -> dict[str, objec
         },
         "knowledge_asset_count": len(kernel.knowledge_engine.list_assets()),
         "mission_count": len(kernel.mission_engine.list_missions()),
+        "agent_runtime_available": agent_runtime is not None,
+        "agent_assignment_count": len(agent_runtime.list_assignments()) if agent_runtime is not None else 0,
+        "agent_execution_count": len(agent_runtime.list_executions()) if agent_runtime is not None else 0,
         "executive_objective_count": len(kernel.executive_runtime.list_objectives()),
         "policy_rule_count": len(kernel.executive_policy_engine.list_rules()),
         "executive_report_available": kernel.executive_reporting is not None,

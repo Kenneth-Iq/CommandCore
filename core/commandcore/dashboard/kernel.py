@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from commandcore.bootstrap import CommandCoreKernel
 from commandcore.events import EventType
 
+from .agents import AgentDashboardService
 from .conversations import ConversationDashboardService
 from .executive import ExecutiveDashboardService
 from .missions import MissionDashboardService
@@ -45,6 +46,16 @@ class KernelOverviewDashboardService:
             return None
         return ConversationDashboardService(
             conversation_engine=conversation_engine,
+            audit_trail=self.kernel.audit_trail,
+        ).build_dashboard()
+
+    def agent_dashboard(self) -> dict[str, object] | None:
+        agent_runtime = getattr(self.kernel, "agent_runtime", None)
+        if agent_runtime is None:
+            return None
+        return AgentDashboardService(
+            agent_registry=self.kernel.agent_registry,
+            agent_runtime=agent_runtime,
             audit_trail=self.kernel.audit_trail,
         ).build_dashboard()
 
@@ -90,6 +101,7 @@ class KernelOverviewDashboardService:
             "mission_dashboard": self.mission_dashboard(),
             "workspace_dashboard": self.workspace_dashboard(),
             "conversation_dashboard": self.conversation_dashboard(),
+            "agent_dashboard": self.agent_dashboard(),
             "knowledge_counts": self.knowledge_counts(),
             "health_snapshot": self.kernel.health_snapshot_builder(self.kernel),
             "audit_summary": self.audit_summary(),

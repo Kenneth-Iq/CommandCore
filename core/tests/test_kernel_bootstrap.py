@@ -3,10 +3,19 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from commandcore.agents import InMemoryAgentRuntime
 from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
 from commandcore.audit import InMemoryAuditTrail
 from commandcore.conversations import InMemoryConversationEngine
-from commandcore.contracts import KnowledgeAsset, LifecycleState, Ownership, OwnershipKind
+from commandcore.contracts import (
+    Agent,
+    AgentRuntimeStatus,
+    KnowledgeAsset,
+    LifecycleState,
+    Ownership,
+    OwnershipKind,
+    PermissionLevel,
+)
 from commandcore.events import InMemoryEventBus
 from commandcore.eventstore import InMemoryEventStore
 from commandcore.executive import (
@@ -50,6 +59,19 @@ def make_ownership() -> Ownership:
     )
 
 
+def make_agent(agent_id: str) -> Agent:
+    return Agent(
+        id=agent_id,
+        name="Hermes Worker",
+        role="engineering",
+        status="active",
+        ownership=make_ownership(),
+        runtime_status=AgentRuntimeStatus.AVAILABLE,
+        permission_level=PermissionLevel.OPERATE,
+        capability_ids=["cap-search"],
+    )
+
+
 def test_create_in_memory_kernel_returns_expected_component_types():
     kernel = create_in_memory_kernel()
 
@@ -63,6 +85,7 @@ def test_create_in_memory_kernel_returns_expected_component_types():
     assert isinstance(kernel.workspace_registry, WorkspaceRegistry)
     assert isinstance(kernel.knowledge_engine, InMemoryKnowledgeEngine)
     assert isinstance(kernel.conversation_engine, InMemoryConversationEngine)
+    assert isinstance(kernel.agent_runtime, InMemoryAgentRuntime)
     assert isinstance(kernel.mission_engine, MissionEngine)
     assert isinstance(kernel.audit_trail, InMemoryAuditTrail)
     assert callable(kernel.health_snapshot_builder)
@@ -86,6 +109,8 @@ def test_create_in_memory_kernel_shares_one_event_bus_across_components():
     assert kernel.knowledge_engine._event_bus is kernel.event_bus
     assert kernel.conversation_engine.event_bus is kernel.event_bus
     assert kernel.conversation_engine.knowledge_engine is kernel.knowledge_engine
+    assert kernel.agent_runtime.event_bus is kernel.event_bus
+    assert kernel.agent_runtime.agent_registry is kernel.agent_registry
     assert kernel.mission_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_gate.event_bus is kernel.event_bus
@@ -204,5 +229,24 @@ def test_conversation_events_flow_to_audit_trail_and_event_store():
     assert "ConversationThreadCreated" in event_names
     assert "ConversationMessageAdded" in event_names
     assert "ConversationKnowledgeLinked" in event_names
+    assert [stored.event for stored in kernel.event_store.read_all()] == kernel.event_bus.list_events()
+    assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()
+
+
+def test_agent_runtime_events_flow_to_audit_trail_and_event_store():
+    kernel = create_in_memory_kernel()
+    kernel.agent_registry.register_agent(make_agent("agent-hermes"))
+    assignment = kernel.agent_runtime.assign_agent(
+        assignment_id="assign-1",
+        agent_id="agent-hermes",
+        mission_id="mission-1",
+    )
+    execution = kernel.agent_runtime.start_execution(assignment.id, execution_id="exec-1")
+    kernel.agent_runtime.complete_execution(execution.id, output_payload={"summary": "done"})
+
+    event_names = [event.payload["event_name"] for event in kernel.event_bus.list_events()]
+    assert "AgentAssigned" in event_names
+    assert "AgentExecutionStarted" in event_names
+    assert "AgentExecutionCompleted" in event_names
     assert [stored.event for stored in kernel.event_store.read_all()] == kernel.event_bus.list_events()
     assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()

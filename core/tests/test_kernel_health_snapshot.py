@@ -79,6 +79,13 @@ def test_build_kernel_health_snapshot_counts_core_components():
             capability_ids=["cap-search"],
         )
     )
+    assignment = kernel.agent_runtime.assign_agent(
+        assignment_id="assign-1",
+        agent_id="agent-hermes",
+        mission_id="mission-1",
+        capability_id="cap-search",
+    )
+    kernel.agent_runtime.start_execution(assignment.id, execution_id="exec-1")
     kernel.project_registry.register_project(
         Project(
             id="proj-jarvis",
@@ -153,6 +160,9 @@ def test_build_kernel_health_snapshot_counts_core_components():
     }
     assert snapshot["knowledge_asset_count"] == 1
     assert snapshot["mission_count"] == 1
+    assert snapshot["agent_runtime_available"] is True
+    assert snapshot["agent_assignment_count"] == 1
+    assert snapshot["agent_execution_count"] == 1
     assert snapshot["executive_objective_count"] == 1
     assert snapshot["policy_rule_count"] == 1
     assert snapshot["executive_report_available"] is True

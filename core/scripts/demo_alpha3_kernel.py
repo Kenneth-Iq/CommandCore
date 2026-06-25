@@ -137,6 +137,22 @@ def run_demo() -> dict[str, object]:
     )
     kernel.executive_orchestrator.get_mission_status_for_objective("obj-alpha3")
 
+    assignment = kernel.agent_runtime.assign_agent(
+        assignment_id="assign-alpha3-demo",
+        agent_id="agent-hermes",
+        mission_id=orchestration.mission_id,
+        capability_id="cap-search",
+        input_payload={"objective_id": "obj-alpha3", "mode": "demo"},
+    )
+    execution = kernel.agent_runtime.start_execution(
+        assignment.id,
+        execution_id="exec-alpha3-demo",
+    )
+    kernel.agent_runtime.complete_execution(
+        execution.id,
+        output_payload={"summary": "Alpha-3 demo runtime execution completed."},
+    )
+
     dashboard_summary = KernelOverviewDashboardService(kernel).build_overview()
     readiness_summary = build_kernel_readiness_report(kernel)
     return {
