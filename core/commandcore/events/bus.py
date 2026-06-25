@@ -3,21 +3,28 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 from .models import Event, EventHandler, EventType
+
+if TYPE_CHECKING:
+    from commandcore.eventstore import InMemoryEventStore
 
 
 class InMemoryEventBus:
     """Store and dispatch events synchronously within one process."""
 
-    def __init__(self) -> None:
+    def __init__(self, event_store: "InMemoryEventStore | None" = None) -> None:
         self._events: list[Event] = []
         self._handlers: dict[EventType, list[EventHandler]] = defaultdict(list)
+        self.event_store = event_store
 
     def publish(self, event: Event) -> Event:
         """Store an event and synchronously notify subscribed handlers."""
 
         self._events.append(event)
+        if self.event_store is not None:
+            self.event_store.append(event)
         for handler in list(self._handlers[event.type]):
             handler(event)
         return event

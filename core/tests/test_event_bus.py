@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from commandcore.events import Event, EventType, InMemoryEventBus
+from commandcore.eventstore import InMemoryEventStore
 
 
 def test_publish_stores_event_and_notifies_subscribers():
@@ -25,6 +26,22 @@ def test_publish_stores_event_and_notifies_subscribers():
     assert published == event
     assert received == [event]
     assert bus.list_events() == [event]
+
+
+def test_publish_appends_to_event_store_when_configured():
+    store = InMemoryEventStore()
+    bus = InMemoryEventBus(event_store=store)
+    event = Event(
+        type=EventType.DOMAIN,
+        source="tests.event_bus",
+        payload={"entity_id": "workspace-local"},
+    )
+
+    published = bus.publish(event)
+
+    assert published == event
+    assert bus.list_events() == [event]
+    assert [stored.event for stored in store.read_all()] == [event]
 
 
 def test_list_events_by_type_filters_in_insertion_order():
@@ -108,6 +125,20 @@ def test_clear_resets_events_and_subscriptions():
     assert received == [first_event]
     assert bus.list_events() == [second_event]
     assert bus.list_events_by_type(EventType.DOMAIN) == [second_event]
+
+
+def test_publish_without_event_store_keeps_existing_behavior():
+    bus = InMemoryEventBus()
+    event = Event(
+        type=EventType.SYSTEM,
+        source="tests.event_bus",
+        payload={"step": "no-store"},
+    )
+
+    published = bus.publish(event)
+
+    assert published == event
+    assert bus.list_events() == [event]
 
 
 def test_event_supports_optional_correlation_and_causation_ids():

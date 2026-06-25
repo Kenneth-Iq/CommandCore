@@ -11,8 +11,11 @@ if TYPE_CHECKING:
 def build_kernel_health_snapshot(kernel: "CommandCoreKernel") -> dict[str, object]:
     """Build a point-in-time health snapshot from the in-memory kernel."""
 
+    event_store = getattr(kernel, "event_store", None)
     return {
         "event_count": len(kernel.event_bus.list_events()),
+        "event_store_available": event_store is not None,
+        "event_store_event_count": len(event_store.read_all()) if event_store is not None else 0,
         "audit_entry_count": len(kernel.audit_trail.list_entries()),
         "registry_entity_counts": {
             "capabilities": len(kernel.capability_registry.list_capabilities()),

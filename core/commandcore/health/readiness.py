@@ -11,6 +11,7 @@ def build_kernel_readiness_report(kernel: object) -> dict[str, object]:
 
     checks = {
         "event_bus": getattr(kernel, "event_bus", None) is not None,
+        "event_store": getattr(kernel, "event_store", None) is not None,
         "registries": all(
             getattr(kernel, name, None) is not None
             for name in (
@@ -34,7 +35,7 @@ def build_kernel_readiness_report(kernel: object) -> dict[str, object]:
     }
 
     for check_name, passed in checks.items():
-        if not passed:
+        if not passed and check_name != "event_store":
             blocking_issues.append(f"Missing required kernel component: {check_name}.")
 
     dashboard_availability = {
@@ -46,6 +47,7 @@ def build_kernel_readiness_report(kernel: object) -> dict[str, object]:
 
     summary_counts = {
         "event_count": len(kernel.event_bus.list_events()) if checks["event_bus"] else 0,
+        "event_store_event_count": len(kernel.event_store.read_all()) if checks["event_store"] else 0,
         "audit_entry_count": len(kernel.audit_trail.list_entries()) if checks["audit_trail"] else 0,
         "workspace_count": len(kernel.workspace_registry.list_workspaces()) if getattr(kernel, "workspace_registry", None) is not None else 0,
         "company_count": len(kernel.company_registry.list_companies()) if getattr(kernel, "company_registry", None) is not None else 0,
@@ -60,6 +62,8 @@ def build_kernel_readiness_report(kernel: object) -> dict[str, object]:
 
     if checks["event_bus"] and checks["audit_trail"] and summary_counts["event_count"] != summary_counts["audit_entry_count"]:
         warnings.append("Audit trail entry count does not match the event bus event count.")
+    if checks["event_bus"] and not checks["event_store"]:
+        warnings.append("Event bus is configured without an event store.")
     if summary_counts["workspace_count"] == 0:
         warnings.append("No workspaces are registered in the kernel.")
     if summary_counts["knowledge_asset_count"] == 0:

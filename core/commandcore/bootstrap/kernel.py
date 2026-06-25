@@ -7,6 +7,7 @@ from typing import Callable
 
 from commandcore.audit import InMemoryAuditTrail, attach_audit_trail
 from commandcore.events import InMemoryEventBus
+from commandcore.eventstore import InMemoryEventStore
 from commandcore.executive import (
     ExecutiveMissionOrchestrator,
     ExecutivePolicyEngine,
@@ -32,6 +33,7 @@ class CommandCoreKernel:
     """Composed in-memory kernel surface for CommandCore components."""
 
     event_bus: InMemoryEventBus
+    event_store: InMemoryEventStore
     capability_registry: CapabilityRegistry
     agent_registry: AgentRegistry
     company_registry: CompanyRegistry
@@ -52,7 +54,8 @@ class CommandCoreKernel:
 def create_in_memory_kernel() -> CommandCoreKernel:
     """Create the current in-memory CommandCore kernel composition."""
 
-    event_bus = InMemoryEventBus()
+    event_store = InMemoryEventStore()
+    event_bus = InMemoryEventBus(event_store=event_store)
     mission_engine = MissionEngine(event_bus=event_bus)
     executive_policy_engine = ExecutivePolicyEngine(event_bus=event_bus)
     executive_policy_gate = ExecutivePolicyGate(
@@ -70,6 +73,7 @@ def create_in_memory_kernel() -> CommandCoreKernel:
     )
     return CommandCoreKernel(
         event_bus=event_bus,
+        event_store=event_store,
         capability_registry=CapabilityRegistry(event_bus=event_bus),
         agent_registry=AgentRegistry(event_bus=event_bus),
         company_registry=CompanyRegistry(event_bus=event_bus),

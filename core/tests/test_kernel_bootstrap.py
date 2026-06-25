@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
 from commandcore.audit import InMemoryAuditTrail
 from commandcore.events import InMemoryEventBus
+from commandcore.eventstore import InMemoryEventStore
 from commandcore.executive import (
     ExecutiveMissionOrchestrator,
     ExecutivePolicyEngine,
@@ -44,6 +45,7 @@ def test_create_in_memory_kernel_returns_expected_component_types():
 
     assert isinstance(kernel, CommandCoreKernel)
     assert isinstance(kernel.event_bus, InMemoryEventBus)
+    assert isinstance(kernel.event_store, InMemoryEventStore)
     assert isinstance(kernel.capability_registry, CapabilityRegistry)
     assert isinstance(kernel.agent_registry, AgentRegistry)
     assert isinstance(kernel.company_registry, CompanyRegistry)
@@ -64,6 +66,7 @@ def test_create_in_memory_kernel_returns_expected_component_types():
 def test_create_in_memory_kernel_shares_one_event_bus_across_components():
     kernel = create_in_memory_kernel()
 
+    assert kernel.event_bus.event_store is kernel.event_store
     assert kernel.capability_registry.event_bus is kernel.event_bus
     assert kernel.agent_registry.event_bus is kernel.event_bus
     assert kernel.company_registry.event_bus is kernel.event_bus
@@ -84,6 +87,7 @@ def test_create_in_memory_kernel_attaches_audit_trail_to_shared_event_bus():
     kernel.executive_runtime.submit_objective(make_objective("obj-1"))
 
     assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()
+    assert [stored.event for stored in kernel.event_store.read_all()] == kernel.event_bus.list_events()
 
 
 def test_create_in_memory_kernel_wires_orchestrator_to_bootstrapped_policy_and_state():

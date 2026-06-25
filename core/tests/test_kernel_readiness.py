@@ -24,9 +24,11 @@ def test_build_kernel_readiness_report_returns_warning_for_empty_kernel():
 
     assert report["status"] == "warning"
     assert report["checks"]["event_bus"] is True
+    assert report["checks"]["event_store"] is True
     assert report["checks"]["dashboards"] is True
     assert report["blocking_issues"] == []
     assert "No workspaces are registered in the kernel." in report["warnings"]
+    assert report["summary_counts"]["event_store_event_count"] == 0
     assert report["summary_counts"]["workspace_count"] == 0
 
 
@@ -82,6 +84,7 @@ def test_build_kernel_readiness_report_returns_ready_for_populated_kernel():
     assert report["summary_counts"]["workspace_count"] == 1
     assert report["summary_counts"]["mission_count"] == 1
     assert report["summary_counts"]["executive_objective_count"] == 1
+    assert report["summary_counts"]["event_store_event_count"] == len(kernel.event_store.read_all())
     assert report["dashboard_availability"]["executive_reporting"] is True
     assert report["kernel_overview_available"] is True
 
@@ -95,3 +98,15 @@ def test_build_kernel_readiness_report_returns_blocked_when_required_component_m
     assert report["status"] == "blocked"
     assert report["checks"]["policy_gate"] is False
     assert "Missing required kernel component: policy_gate." in report["blocking_issues"]
+
+
+def test_build_kernel_readiness_report_warns_when_event_store_is_missing():
+    kernel = create_in_memory_kernel()
+    object.__setattr__(kernel, "event_store", None)
+
+    report = build_kernel_readiness_report(kernel)
+
+    assert report["status"] == "warning"
+    assert report["checks"]["event_bus"] is True
+    assert report["checks"]["event_store"] is False
+    assert "Event bus is configured without an event store." in report["warnings"]
