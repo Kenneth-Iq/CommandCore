@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/ActivityFeed.tsx","./src/components/InfoPanel.tsx","./src/components/MetricCard.tsx","./src/components/PageHeader.tsx","./src/components/Sidebar.tsx","./src/components/StatusBadge.tsx","./src/data/mockKernel.ts","./src/pages/DashboardPage.tsx"],"version":"5.9.3"}
