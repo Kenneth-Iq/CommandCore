@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadConsoleData, type ConsoleDataResult } from "./api/commandcoreApi";
+import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
 import { type NavPage, pageMap } from "./data/mockKernel";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
+import { ExecutiveHome } from "./pages/ExecutiveHome";
 import { HealthReadiness } from "./pages/HealthReadiness";
-import { KernelOverview } from "./pages/KernelOverview";
 import { KnowledgeDashboard } from "./pages/KnowledgeDashboard";
 import { MissionDashboard } from "./pages/MissionDashboard";
+import { SettingsPlaceholder } from "./pages/SettingsPlaceholder";
 import { ToolDashboard } from "./pages/ToolDashboard";
 import { WorkspacesDashboard } from "./pages/WorkspacesDashboard";
 
@@ -51,7 +53,7 @@ export default function App() {
 
     switch (activePage) {
       case "kernel":
-        return <KernelOverview {...props} />;
+        return <ExecutiveHome {...props} pages={consoleData.pages} />;
       case "executive":
         return <ExecutiveDashboard {...props} />;
       case "missions":
@@ -68,15 +70,20 @@ export default function App() {
         return <WorkspacesDashboard {...props} />;
       case "health":
         return <HealthReadiness {...props} />;
+      case "settings":
+        return <SettingsPlaceholder {...props} />;
       default:
-        return <KernelOverview {...props} />;
+        return <ExecutiveHome {...props} pages={consoleData.pages} />;
     }
-  }, [activePage, consoleData.source, currentPage, sourceMessage]);
+  }, [activePage, consoleData.pages, consoleData.source, currentPage, sourceMessage]);
 
   return (
     <div className="app-frame">
       <Sidebar activePage={activePage} onSelect={setActivePage} />
-      <main className="console-main">{renderedPage}</main>
+      <main className="console-main">
+        <CommandBar />
+        {renderedPage}
+      </main>
     </div>
   );
 }

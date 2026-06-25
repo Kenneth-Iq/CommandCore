@@ -2,7 +2,7 @@ import { EventFeed } from "../components/EventFeed";
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
-import { StatusBadge } from "../components/StatusBadge";
+import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import type { PageData } from "../data/mockKernel";
 
@@ -17,16 +17,7 @@ export function OperationsPage({ page, source, sourceMessage }: OperationsPagePr
     <div className="page-shell">
       <PageHeader page={page} />
 
-      <div className="surface source-strip">
-        <div>
-          <p className="page-eyebrow">Data Mode</p>
-          <strong>{source === "live" ? "Connected to CommandCore API" : "Using Mock Kernel Snapshot"}</strong>
-          {sourceMessage ? <p className="source-note">{sourceMessage}</p> : null}
-        </div>
-        <StatusBadge tone={source === "live" ? "ready" : "idle"}>
-          {source === "live" ? "Live API" : "Mock Data"}
-        </StatusBadge>
-      </div>
+      <SourceStrip source={source} sourceMessage={sourceMessage} status={page.status} />
 
       <section className="metrics-grid">
         {page.metrics.map((metric) => (

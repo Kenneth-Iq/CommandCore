@@ -18,7 +18,7 @@ export function Sidebar({ activePage, onSelect }: SidebarProps) {
       </div>
 
       <div className="sidebar-section">
-        <p className="sidebar-label">Operating Views</p>
+        <p className="sidebar-label">Command Centre</p>
         <nav className="nav-list">
           {pageOrder.map((page) => (
             <button
@@ -28,15 +28,18 @@ export function Sidebar({ activePage, onSelect }: SidebarProps) {
               onClick={() => onSelect(page.id)}
             >
               <span className="nav-short">{page.short}</span>
-              <span>{page.label}</span>
+              <span className="nav-label-wrap">
+                <span>{page.label}</span>
+                <span className={`nav-dot ${activePage === page.id ? "is-active" : ""}`} />
+              </span>
             </button>
           ))}
         </nav>
       </div>
 
       <div className="sidebar-footer">
-        <p>Alpha-5 MVP</p>
-        <span>Static dashboard shell</span>
+        <p>Alpha-5.2 Command Centre</p>
+        <span>Live telemetry + executive surfaces</span>
       </div>
     </aside>
   );

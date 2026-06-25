@@ -59,6 +59,7 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
         knowledge: buildKnowledgeDashboard(knowledge),
         workspaces: buildWorkspaceDashboard(workspaces),
         health: buildHealthDashboard(health, readiness),
+        settings: pageMap.settings,
       },
       source: "live",
       baseUrl: apiBaseUrl,

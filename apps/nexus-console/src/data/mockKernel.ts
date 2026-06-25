@@ -9,7 +9,8 @@ export type NavPage =
   | "conversations"
   | "knowledge"
   | "workspaces"
-  | "health";
+  | "health"
+  | "settings";
 
 export type MetricCard = {
   label: string;
@@ -74,26 +75,28 @@ export type KernelSnapshot = {
   knowledgeDashboard: PageData;
   workspaceDashboard: PageData;
   healthReadiness: PageData;
+  settingsPage: PageData;
 };
 
 export const pageOrder: Array<{ id: NavPage; label: string; short: string }> = [
-  { id: "kernel", label: "Kernel Overview", short: "KRNL" },
-  { id: "executive", label: "Executive Dashboard", short: "EXEC" },
-  { id: "missions", label: "Mission Dashboard", short: "MSSN" },
-  { id: "agents", label: "Agent Dashboard", short: "AGNT" },
-  { id: "tools", label: "Tool Dashboard", short: "TOOL" },
-  { id: "conversations", label: "Conversation Dashboard", short: "CONV" },
-  { id: "knowledge", label: "Knowledge Dashboard", short: "KNOW" },
-  { id: "workspaces", label: "Workspace Dashboard", short: "WKSP" },
-  { id: "health", label: "Health / Readiness", short: "HLTH" },
+  { id: "kernel", label: "Executive", short: "HOME" },
+  { id: "executive", label: "Governance", short: "GOV" },
+  { id: "missions", label: "Missions", short: "MSSN" },
+  { id: "agents", label: "Agents", short: "AGNT" },
+  { id: "tools", label: "Tools", short: "TOOL" },
+  { id: "conversations", label: "Conversations", short: "CONV" },
+  { id: "knowledge", label: "Knowledge", short: "KNOW" },
+  { id: "workspaces", label: "Workspaces", short: "WKSP" },
+  { id: "health", label: "Health", short: "HLTH" },
+  { id: "settings", label: "Settings", short: "SET" },
 ];
 
 export const mockKernel: KernelSnapshot = {
   kernelOverview: {
-    eyebrow: "CommandCore / Governed Kernel",
-    title: "Kernel Overview",
+    eyebrow: "CommandCore / Executive Home",
+    title: "Executive Home",
     description:
-      "Single-screen operating view across governance, runtime execution, tool flow, knowledge, and readiness.",
+      "Live command-centre view across kernel health, runtime attention, active missions, agents, tools, conversations, and knowledge.",
     status: { label: "Ready", tone: "ready" },
     metrics: [
       { label: "Readiness", value: "Ready", hint: "No blocking issues", tone: "ready" },
@@ -421,6 +424,37 @@ export const mockKernel: KernelSnapshot = {
     ],
     emptyState: "No health signals are currently available.",
   },
+  settingsPage: {
+    eyebrow: "Console / Placeholder Surface",
+    title: "Settings",
+    description: "Reserved space for future console preferences, operator layouts, and command routing controls.",
+    status: { label: "Placeholder", tone: "idle" },
+    metrics: [
+      { label: "Profiles", value: 0, hint: "No saved layouts yet", tone: "idle" },
+      { label: "Command Routes", value: 0, hint: "Jarvis routing not wired yet", tone: "idle" },
+      { label: "Hotkeys", value: 1, hint: "Command bar hint visible", tone: "ready" },
+      { label: "Theme", value: "Dark", hint: "Command-centre display mode", tone: "active" },
+    ],
+    primaryPanel: {
+      title: "Future Controls",
+      rows: [
+        { title: "Operator Layouts", subtitle: "Second-monitor and role-based layouts will land here.", badge: "Planned", badgeTone: "idle" },
+        { title: "Jarvis Routing", subtitle: "Command bar actions will eventually dispatch through governed runtime surfaces.", badge: "Placeholder", badgeTone: "idle" },
+      ],
+    },
+    secondaryPanel: {
+      title: "Current State",
+      rows: [
+        { title: "Read-only milestone", subtitle: "No write controls are enabled in Nexus yet.", badge: "Safe", badgeTone: "ready" },
+        { title: "Command Bar", subtitle: "Visual placeholder only for Alpha-5.2.", badge: "Pending", badgeTone: "warning" },
+      ],
+    },
+    activityTitle: "Recent Settings Signals",
+    activity: [
+      { id: "s1", eventName: "SettingsPlaceholderVisible", source: "nexus-console", occurredAt: "now", detail: "Settings surface is reserved for future operator controls.", tone: "idle" },
+    ],
+    emptyState: "Settings activity will appear here once console preferences are implemented.",
+  },
 };
 
 export const pageMap: Record<NavPage, PageData> = {
@@ -433,4 +467,5 @@ export const pageMap: Record<NavPage, PageData> = {
   knowledge: mockKernel.knowledgeDashboard,
   workspaces: mockKernel.workspaceDashboard,
   health: mockKernel.healthReadiness,
+  settings: mockKernel.settingsPage,
 };

@@ -1,4 +1,3 @@
-import { AgentStatusGrid } from "../components/AgentStatusGrid";
 import { EventFeed } from "../components/EventFeed";
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
@@ -7,17 +6,17 @@ import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import type { PageData } from "../data/mockKernel";
 
-type AgentDashboardProps = {
+type SettingsPlaceholderProps = {
   page: PageData;
   source: DataSource;
   sourceMessage?: string;
 };
 
-export function AgentDashboard({ page, source, sourceMessage }: AgentDashboardProps) {
+export function SettingsPlaceholder({ page, source, sourceMessage }: SettingsPlaceholderProps) {
   return (
     <div className="page-shell">
       <PageHeader page={page} />
-      <SourceStrip source={source} sourceMessage={sourceMessage} status={page.status} />
+      <SourceStrip source={source} sourceMessage={sourceMessage} status={page.status} label="Settings Surface" />
 
       <section className="metrics-grid">
         {page.metrics.map((metric) => (
@@ -25,10 +24,10 @@ export function AgentDashboard({ page, source, sourceMessage }: AgentDashboardPr
         ))}
       </section>
 
-      <section className="operations-layout">
-        <AgentStatusGrid page={page} />
+      <section className="panel-grid">
         <InfoPanel title={page.primaryPanel.title} rows={page.primaryPanel.rows} />
         <InfoPanel title={page.secondaryPanel.title} rows={page.secondaryPanel.rows} />
+        {page.tertiaryPanel ? <InfoPanel title={page.tertiaryPanel.title} rows={page.tertiaryPanel.rows} /> : null}
       </section>
 
       <EventFeed title={page.activityTitle} items={page.activity} emptyMessage={page.emptyState} />
