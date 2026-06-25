@@ -61,6 +61,28 @@ def test_commandcore_api_routes_return_200_and_expected_fields():
     assert "knowledge_counts" in knowledge.json()
 
 
+def test_commandcore_api_returns_useful_non_zero_seeded_dashboard_data():
+    with TestClient(create_api_app()) as client:
+        kernel = client.get("/dashboard/kernel").json()
+        executive = client.get("/dashboard/executive").json()
+        missions = client.get("/dashboard/missions").json()
+        agents = client.get("/dashboard/agents").json()
+        tools = client.get("/dashboard/tools").json()
+        conversations = client.get("/dashboard/conversations").json()
+
+    assert kernel["health_snapshot"]["event_count"] > 0
+    assert kernel["audit_summary"]["entry_count"] > 0
+    assert executive["objective_counts"]["total"] >= 2
+    assert missions["mission_counts"]["total"] >= 2
+    assert agents["agent_counts"]["total"] >= 3
+    assert agents["assignment_counts"]["total"] >= 1
+    assert tools["tool_counts"]["total"] >= 3
+    assert tools["invocation_counts"]["completed"] >= 1
+    assert conversations["conversation_counts"]["total"] >= 2
+    assert conversations["message_counts"]["total"] >= 4
+    assert conversations["knowledge_link_count"] >= 2
+
+
 def test_commandcore_api_is_read_only_for_defined_routes():
     with TestClient(create_api_app()) as client:
         response = client.post("/dashboard/kernel")

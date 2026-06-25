@@ -7,6 +7,7 @@ from functools import lru_cache
 from fastapi import FastAPI
 
 from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
+from commandcore.demo import seed_demo_kernel
 
 from .routes import build_router
 
@@ -15,7 +16,9 @@ from .routes import build_router
 def get_api_kernel() -> CommandCoreKernel:
     """Return the shared in-memory kernel for the API process."""
 
-    return create_in_memory_kernel()
+    kernel = create_in_memory_kernel()
+    seed_demo_kernel(kernel)
+    return kernel
 
 
 def create_api_app() -> FastAPI:
