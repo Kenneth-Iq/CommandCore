@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { loadConsoleData, type ConsoleDataResult } from "./api/commandcoreApi";
 import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
-import { type NavPage, pageMap } from "./data/mockKernel";
+import { mockMissionCentre, pageMap, type NavPage } from "./data/mockKernel";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
@@ -16,6 +16,7 @@ import { WorkspacesDashboard } from "./pages/WorkspacesDashboard";
 
 const initialData: ConsoleDataResult = {
   pages: pageMap,
+  missionCentre: mockMissionCentre,
   source: "mock",
   error: "Loading console data...",
 };
@@ -57,7 +58,7 @@ export default function App() {
       case "executive":
         return <ExecutiveDashboard {...props} />;
       case "missions":
-        return <MissionDashboard {...props} />;
+        return <MissionDashboard {...props} missionCentre={consoleData.missionCentre} />;
       case "agents":
         return <AgentDashboard {...props} />;
       case "tools":
@@ -75,7 +76,7 @@ export default function App() {
       default:
         return <ExecutiveHome {...props} pages={consoleData.pages} />;
     }
-  }, [activePage, consoleData.pages, consoleData.source, currentPage, sourceMessage]);
+  }, [activePage, consoleData.missionCentre, consoleData.pages, consoleData.source, currentPage, sourceMessage]);
 
   return (
     <div className="app-frame">

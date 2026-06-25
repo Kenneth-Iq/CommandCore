@@ -1,8 +1,12 @@
 import {
   mockKernel,
+  mockMissionCentre,
   pageMap,
   type ActivityItem,
   type AvailabilityItem,
+  type MissionAgentExecution,
+  type MissionCentreData,
+  type MissionRecord,
   type NavPage,
   type PageData,
   type StatusTone,
@@ -13,6 +17,7 @@ export type DataSource = "live" | "mock";
 
 export type ConsoleDataResult = {
   pages: Record<NavPage, PageData>;
+  missionCentre: MissionCentreData;
   source: DataSource;
   baseUrl?: string;
   error?: string;
@@ -28,6 +33,7 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
   if (!apiBaseUrl) {
     return {
       pages: pageMap,
+      missionCentre: mockMissionCentre,
       source: "mock",
       error: "VITE_COMMANDCORE_API_URL is not configured.",
     };
@@ -61,12 +67,14 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
         health: buildHealthDashboard(health, readiness),
         settings: pageMap.settings,
       },
+      missionCentre: buildMissionCentre(missions),
       source: "live",
       baseUrl: apiBaseUrl,
     };
   } catch (error) {
     return {
       pages: pageMap,
+      missionCentre: mockMissionCentre,
       source: "mock",
       baseUrl: apiBaseUrl,
       error: error instanceof Error ? error.message : "Unable to load CommandCore API.",
@@ -206,6 +214,68 @@ function buildMissionDashboard(data: JsonObject): PageData {
     ].slice(0, 6)),
     activity: activitiesOf(arrayOf(data.recent_mission_activity), "No recent mission activity available."),
   };
+}
+
+function buildMissionCentre(data: JsonObject): MissionCentreData {
+  const counts = objectOf(data.mission_counts);
+  const throughput = objectOf(data.mission_throughput);
+
+  return {
+    counts: {
+      total: numberOf(counts.total),
+      active: numberOf(counts.active),
+      completed: numberOf(counts.completed),
+      failed: numberOf(counts.failed),
+    },
+    throughput: {
+      created: numberOf(throughput.created),
+      completed: numberOf(throughput.completed),
+      failed: numberOf(throughput.failed),
+      terminal: numberOf(throughput.terminal),
+      completionRate: numberOf(throughput.completion_rate),
+    },
+    assignedAgentCount: numberOf(data.assigned_agent_count),
+    active: missionRecordsOf(arrayOf(data.active_missions)),
+    completed: missionRecordsOf(arrayOf(data.completed_missions)),
+    failed: missionRecordsOf(arrayOf(data.failed_missions)),
+    executions: {
+      active: executionRecordsOf(arrayOf(data.active_agent_executions)),
+      completed: executionRecordsOf(arrayOf(data.completed_agent_executions)),
+      failed: executionRecordsOf(arrayOf(data.failed_agent_executions)),
+    },
+  };
+}
+
+function missionRecordsOf(items: unknown[]): MissionRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      missionId: stringOf(object.mission_id, `mission-${index}`),
+      title: stringOf(object.title, "Untitled mission"),
+      status: stringOf(object.status, "unknown"),
+      assignedAgentId: typeof object.assigned_agent_id === "string" ? object.assigned_agent_id : undefined,
+      scope: arrayOf(object.scope).map((value) => stringOf(value, "")),
+      capabilityIds: arrayOf(object.capability_ids).map((value) => stringOf(value, "")),
+      taskCount: typeof object.task_count === "number" ? object.task_count : undefined,
+      resultSummary: typeof object.result_summary === "string" ? object.result_summary : undefined,
+      failureReason: typeof object.failure_reason === "string" ? object.failure_reason : undefined,
+    };
+  });
+}
+
+function executionRecordsOf(items: unknown[]): MissionAgentExecution[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      executionId: stringOf(object.execution_id, `execution-${index}`),
+      agentId: stringOf(object.agent_id, "unknown-agent"),
+      missionId: typeof object.mission_id === "string" ? object.mission_id : undefined,
+      taskId: typeof object.task_id === "string" ? object.task_id : undefined,
+      capabilityId: typeof object.capability_id === "string" ? object.capability_id : undefined,
+      status: stringOf(object.status, "unknown"),
+      error: typeof object.error === "string" ? object.error : undefined,
+    };
+  });
 }
 
 function buildAgentDashboard(data: JsonObject): PageData {

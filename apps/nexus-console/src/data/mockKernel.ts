@@ -47,6 +47,59 @@ export type AvailabilityItem = {
   detail: string;
 };
 
+export type MissionAgentExecution = {
+  executionId: string;
+  agentId: string;
+  missionId?: string;
+  taskId?: string;
+  capabilityId?: string;
+  status: string;
+  error?: string;
+};
+
+export type MissionRecord = {
+  missionId: string;
+  title: string;
+  status: string;
+  assignedAgentId?: string;
+  scope: string[];
+  capabilityIds: string[];
+  taskCount?: number;
+  resultSummary?: string;
+  failureReason?: string;
+};
+
+export type MissionCentreData = {
+  counts: { total: number; active: number; completed: number; failed: number };
+  throughput: { created: number; completed: number; failed: number; terminal: number; completionRate: number };
+  assignedAgentCount: number;
+  active: MissionRecord[];
+  completed: MissionRecord[];
+  failed: MissionRecord[];
+  executions: {
+    active: MissionAgentExecution[];
+    completed: MissionAgentExecution[];
+    failed: MissionAgentExecution[];
+  };
+};
+
+export function missionStatusTone(status: string): StatusTone {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("fail")) {
+    return "warning";
+  }
+  if (normalized.includes("block")) {
+    return "blocked";
+  }
+  if (normalized.includes("complete")) {
+    return "complete";
+  }
+  if (normalized.includes("request") || normalized.includes("approve") || normalized.includes("assign") || normalized.includes("running")) {
+    return "active";
+  }
+  return "idle";
+}
+
 export type PageData = {
   title: string;
   eyebrow: string;
@@ -221,14 +274,14 @@ export const mockKernel: KernelSnapshot = {
     metrics: [
       { label: "Total Missions", value: 6, hint: "Across current operating slice" },
       { label: "Active Missions", value: 2, hint: "Requested / approved / blocked" },
-      { label: "Completed", value: 4, hint: "Terminal with result summaries", tone: "complete" },
+      { label: "Completed", value: 3, hint: "Terminal with result summaries", tone: "complete" },
       { label: "Assigned Agents", value: 3, hint: "Distinct operators engaged" },
     ],
     primaryPanel: {
       title: "Mission Throughput",
       rows: [
-        { title: "Created", subtitle: "6 total mission records", meta: "Completion rate 80%" },
-        { title: "Completed", subtitle: "4 resolved missions", badge: "80%", badgeTone: "complete" },
+        { title: "Created", subtitle: "6 total mission records", meta: "Completion rate 75%" },
+        { title: "Completed", subtitle: "3 resolved missions", badge: "75%", badgeTone: "complete" },
         { title: "Failed", subtitle: "1 failed mission in audit window", badge: "Watch", badgeTone: "warning" },
       ],
     },
@@ -488,6 +541,88 @@ export const mockKernel: KernelSnapshot = {
       { id: "s1", eventName: "SettingsPlaceholderVisible", source: "nexus-console", occurredAt: "now", detail: "Settings surface is reserved for future operator controls.", tone: "idle" },
     ],
     emptyState: "Settings activity will appear here once console preferences are implemented.",
+  },
+};
+
+export const mockMissionCentre: MissionCentreData = {
+  counts: { total: 6, active: 2, completed: 3, failed: 1 },
+  throughput: { created: 6, completed: 3, failed: 1, terminal: 4, completionRate: 0.75 },
+  assignedAgentCount: 3,
+  active: [
+    {
+      missionId: "mission-alpha5-ui",
+      title: "Prepare Alpha-5 UI review",
+      status: "requested",
+      assignedAgentId: "agent-hermes",
+      scope: ["project:proj-alpha5"],
+      capabilityIds: ["cap-ui"],
+      taskCount: 2,
+    },
+  ],
+  completed: [
+    {
+      missionId: "mission-alpha5-ops",
+      title: "Validate runtime dashboards",
+      status: "completed",
+      assignedAgentId: "agent-claw",
+      scope: ["project:proj-alpha5"],
+      capabilityIds: ["cap-ops"],
+      taskCount: 2,
+      resultSummary: "Runtime dashboards validated across kernel, mission, and tool surfaces.",
+    },
+  ],
+  failed: [
+    {
+      missionId: "mission-alpha5-recovery",
+      title: "Recover failed connector sync",
+      status: "failed",
+      assignedAgentId: "agent-sentinel",
+      scope: ["project:proj-alpha5"],
+      capabilityIds: ["cap-recovery"],
+      taskCount: 1,
+      failureReason: "Connector sync timed out after 3 retries.",
+    },
+  ],
+  executions: {
+    active: [
+      {
+        executionId: "exec-204",
+        agentId: "agent-hermes",
+        missionId: "mission-alpha5-ui",
+        taskId: "task-ui-2",
+        capabilityId: "cap-ui",
+        status: "running",
+      },
+    ],
+    completed: [
+      {
+        executionId: "exec-203",
+        agentId: "agent-claw",
+        missionId: "mission-alpha5-ops",
+        taskId: "task-ops-1",
+        capabilityId: "cap-ops",
+        status: "completed",
+      },
+      {
+        executionId: "exec-202",
+        agentId: "agent-claw",
+        missionId: "mission-alpha5-ops",
+        taskId: "task-ops-2",
+        capabilityId: "cap-ops",
+        status: "completed",
+      },
+    ],
+    failed: [
+      {
+        executionId: "exec-201",
+        agentId: "agent-sentinel",
+        missionId: "mission-alpha5-recovery",
+        taskId: "task-recovery-1",
+        capabilityId: "cap-recovery",
+        status: "failed",
+        error: "Connector timeout after 3 retries.",
+      },
+    ],
   },
 };
 
