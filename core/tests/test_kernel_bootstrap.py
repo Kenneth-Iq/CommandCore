@@ -5,6 +5,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
 from commandcore.audit import InMemoryAuditTrail
+from commandcore.conversations import InMemoryConversationEngine
 from commandcore.events import InMemoryEventBus
 from commandcore.eventstore import InMemoryEventStore
 from commandcore.executive import (
@@ -52,6 +53,7 @@ def test_create_in_memory_kernel_returns_expected_component_types():
     assert isinstance(kernel.project_registry, ProjectRegistry)
     assert isinstance(kernel.workspace_registry, WorkspaceRegistry)
     assert isinstance(kernel.knowledge_engine, InMemoryKnowledgeEngine)
+    assert isinstance(kernel.conversation_engine, InMemoryConversationEngine)
     assert isinstance(kernel.mission_engine, MissionEngine)
     assert isinstance(kernel.audit_trail, InMemoryAuditTrail)
     assert callable(kernel.health_snapshot_builder)
@@ -73,6 +75,7 @@ def test_create_in_memory_kernel_shares_one_event_bus_across_components():
     assert kernel.project_registry.event_bus is kernel.event_bus
     assert kernel.workspace_registry.event_bus is kernel.event_bus
     assert kernel.knowledge_engine._event_bus is kernel.event_bus
+    assert kernel.conversation_engine.event_bus is kernel.event_bus
     assert kernel.mission_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_gate.event_bus is kernel.event_bus

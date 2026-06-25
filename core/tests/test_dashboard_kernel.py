@@ -49,6 +49,20 @@ def test_kernel_overview_dashboard_service_aggregates_all_sections():
             safe_to_query=True,
         )
     )
+    conversation = kernel.conversation_engine.create_conversation(
+        conversation_id="conv-1",
+        workspace_id="ws-local",
+        participant_ids=["jarvis"],
+    )
+    thread = kernel.conversation_engine.create_thread(conversation.id, thread_id="thread-1")
+    kernel.conversation_engine.add_message(
+        conversation.id,
+        thread.id,
+        message_id="msg-1",
+        participant_id="jarvis",
+        role="assistant",
+        content="Prepare the overview dashboard summary.",
+    )
     kernel.executive_policy_engine.add_rule(
         PolicyRule(
             id="warn-high-priority",
@@ -74,6 +88,9 @@ def test_kernel_overview_dashboard_service_aggregates_all_sections():
     }
     assert overview["mission_dashboard"]["mission_counts"]["completed"] == 1
     assert overview["workspace_dashboard"]["workspace_counts"]["total"] == 1
+    assert overview["conversation_dashboard"]["conversation_counts"] == {"total": 1}
+    assert overview["conversation_dashboard"]["thread_counts"] == {"total": 1}
+    assert overview["conversation_dashboard"]["message_counts"] == {"total": 1}
     assert overview["knowledge_counts"] == {"asset_count": 1, "relationship_count": 0}
     assert overview["health_snapshot"]["executive_report_available"] is True
     assert overview["audit_summary"]["entry_count"] == len(kernel.audit_trail.list_entries())
