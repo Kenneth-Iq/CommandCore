@@ -58,8 +58,12 @@ def create_in_memory_kernel() -> CommandCoreKernel:
 
     event_store = InMemoryEventStore()
     event_bus = InMemoryEventBus(event_store=event_store)
+    knowledge_engine = InMemoryKnowledgeEngine(event_bus=event_bus)
     mission_engine = MissionEngine(event_bus=event_bus)
-    conversation_engine = InMemoryConversationEngine(event_bus=event_bus)
+    conversation_engine = InMemoryConversationEngine(
+        event_bus=event_bus,
+        knowledge_engine=knowledge_engine,
+    )
     executive_policy_engine = ExecutivePolicyEngine(event_bus=event_bus)
     executive_policy_gate = ExecutivePolicyGate(
         policy_engine=executive_policy_engine,
@@ -82,7 +86,7 @@ def create_in_memory_kernel() -> CommandCoreKernel:
         company_registry=CompanyRegistry(event_bus=event_bus),
         project_registry=ProjectRegistry(event_bus=event_bus),
         workspace_registry=WorkspaceRegistry(event_bus=event_bus),
-        knowledge_engine=InMemoryKnowledgeEngine(event_bus=event_bus),
+        knowledge_engine=knowledge_engine,
         conversation_engine=conversation_engine,
         mission_engine=mission_engine,
         audit_trail=audit_trail,

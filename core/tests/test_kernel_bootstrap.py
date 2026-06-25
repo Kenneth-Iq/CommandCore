@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from commandcore.bootstrap import CommandCoreKernel, create_in_memory_kernel
 from commandcore.audit import InMemoryAuditTrail
 from commandcore.conversations import InMemoryConversationEngine
+from commandcore.contracts import KnowledgeAsset, LifecycleState, Ownership, OwnershipKind
 from commandcore.events import InMemoryEventBus
 from commandcore.eventstore import InMemoryEventStore
 from commandcore.executive import (
@@ -38,6 +39,14 @@ def make_objective(objective_id: str) -> Objective:
         requested_by="jarvis",
         scope=["project:proj-1"],
         priority="high",
+    )
+
+
+def make_ownership() -> Ownership:
+    return Ownership(
+        kind=OwnershipKind.DOMAIN,
+        reference="commandcore.architecture",
+        display_name="CommandCore Architecture",
     )
 
 
@@ -76,6 +85,7 @@ def test_create_in_memory_kernel_shares_one_event_bus_across_components():
     assert kernel.workspace_registry.event_bus is kernel.event_bus
     assert kernel.knowledge_engine._event_bus is kernel.event_bus
     assert kernel.conversation_engine.event_bus is kernel.event_bus
+    assert kernel.conversation_engine.knowledge_engine is kernel.knowledge_engine
     assert kernel.mission_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_engine.event_bus is kernel.event_bus
     assert kernel.executive_policy_gate.event_bus is kernel.event_bus
@@ -159,3 +169,40 @@ def test_create_in_memory_kernel_exposes_bound_observability_helpers():
 
     assert objective_report["objective_count"] == 1
     assert health_snapshot["executive_report_available"] is True
+
+
+def test_conversation_events_flow_to_audit_trail_and_event_store():
+    kernel = create_in_memory_kernel()
+    conversation = kernel.conversation_engine.create_conversation(
+        conversation_id="conv-1",
+        participant_ids=["jarvis"],
+    )
+    thread = kernel.conversation_engine.create_thread(conversation.id, thread_id="thread-1")
+    message = kernel.conversation_engine.add_message(
+        conversation.id,
+        thread.id,
+        message_id="msg-1",
+        participant_id="jarvis",
+        role="assistant",
+        content="Wire context visibility.",
+    )
+    kernel.knowledge_engine.add_asset(
+        KnowledgeAsset(
+            id="know-external",
+            title="Conversation Knowledge Link",
+            asset_type="runbook",
+            ownership=make_ownership(),
+            lifecycle_state=LifecycleState.ACTIVE,
+            workspace_id="ws-local",
+            safe_to_query=True,
+        )
+    )
+    kernel.conversation_engine.link_message_to_knowledge(message.id, "know-external")
+
+    event_names = [event.payload["event_name"] for event in kernel.event_bus.list_events()]
+    assert "ConversationCreated" in event_names
+    assert "ConversationThreadCreated" in event_names
+    assert "ConversationMessageAdded" in event_names
+    assert "ConversationKnowledgeLinked" in event_names
+    assert [stored.event for stored in kernel.event_store.read_all()] == kernel.event_bus.list_events()
+    assert kernel.audit_trail.list_entries() == kernel.event_bus.list_events()

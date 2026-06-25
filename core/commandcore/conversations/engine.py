@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from commandcore.events import Event, EventType, InMemoryEventBus
 
@@ -14,6 +15,19 @@ from .models import (
     ConversationThread,
 )
 
+if TYPE_CHECKING:
+    from commandcore.knowledge import InMemoryKnowledgeEngine
+
+
+@dataclass(frozen=True, slots=True)
+class ConversationKnowledgeLink:
+    """Reference one conversation object to one knowledge asset ID."""
+
+    conversation_id: str
+    knowledge_asset_id: str
+    thread_id: str | None = None
+    message_id: str | None = None
+
 
 @dataclass(slots=True)
 class InMemoryConversationEngine:
@@ -24,7 +38,9 @@ class InMemoryConversationEngine:
     _messages: dict[str, ConversationMessage] = field(default_factory=dict)
     _contexts: dict[str, ConversationContext] = field(default_factory=dict)
     _participants: dict[str, ConversationParticipant] = field(default_factory=dict)
+    _knowledge_links: list[ConversationKnowledgeLink] = field(default_factory=list)
     event_bus: InMemoryEventBus | None = None
+    knowledge_engine: "InMemoryKnowledgeEngine | None" = None
     source: str | None = None
 
     default_event_source: str = "commandcore.conversations.engine"
@@ -206,6 +222,14 @@ class InMemoryConversationEngine:
         )
         return message
 
+    def get_message(self, message_id: str) -> ConversationMessage:
+        """Return a message by ID."""
+
+        try:
+            return self._messages[message_id]
+        except KeyError as exc:
+            raise KeyError(f"Conversation message ID not found: {message_id}") from exc
+
     def list_messages(
         self,
         *,
@@ -298,6 +322,116 @@ class InMemoryConversationEngine:
             return self._contexts[context_id]
         except KeyError as exc:
             raise KeyError(f"Conversation context ID not found: {context_id}") from exc
+
+    def list_contexts(
+        self,
+        *,
+        conversation_id: str | None = None,
+        thread_id: str | None = None,
+    ) -> list[ConversationContext]:
+        """Return attached context records, optionally filtered by scope."""
+
+        if conversation_id is not None:
+            self.get_conversation(conversation_id)
+        if thread_id is not None:
+            thread = self.get_thread(thread_id)
+            if conversation_id is not None and thread.conversation_id != conversation_id:
+                raise ValueError("Conversation thread does not belong to the requested conversation.")
+
+        contexts = list(self._contexts.values())
+        if conversation_id is not None:
+            contexts = [context for context in contexts if context.conversation_id == conversation_id]
+        if thread_id is not None:
+            contexts = [context for context in contexts if context.thread_id == thread_id]
+        return contexts
+
+    def link_message_to_knowledge(
+        self,
+        message_id: str,
+        knowledge_asset_id: str,
+    ) -> ConversationKnowledgeLink:
+        """Link one message to one knowledge asset ID."""
+
+        message = self.get_message(message_id)
+        self._validate_knowledge_asset(knowledge_asset_id)
+        link = ConversationKnowledgeLink(
+            conversation_id=message.conversation_id,
+            thread_id=message.thread_id,
+            message_id=message.id,
+            knowledge_asset_id=knowledge_asset_id,
+        )
+        return self._store_knowledge_link(link)
+
+    def link_thread_to_knowledge(
+        self,
+        thread_id: str,
+        knowledge_asset_id: str,
+    ) -> ConversationKnowledgeLink:
+        """Link one thread to one knowledge asset ID."""
+
+        thread = self.get_thread(thread_id)
+        self._validate_knowledge_asset(knowledge_asset_id)
+        link = ConversationKnowledgeLink(
+            conversation_id=thread.conversation_id,
+            thread_id=thread.id,
+            knowledge_asset_id=knowledge_asset_id,
+        )
+        return self._store_knowledge_link(link)
+
+    def list_knowledge_links(
+        self,
+        *,
+        conversation_id: str | None = None,
+        thread_id: str | None = None,
+        message_id: str | None = None,
+    ) -> list[ConversationKnowledgeLink]:
+        """Return conversation knowledge links filtered by scope."""
+
+        if conversation_id is not None:
+            self.get_conversation(conversation_id)
+        if thread_id is not None:
+            thread = self.get_thread(thread_id)
+            if conversation_id is not None and thread.conversation_id != conversation_id:
+                raise ValueError("Conversation thread does not belong to the requested conversation.")
+        if message_id is not None:
+            message = self.get_message(message_id)
+            if conversation_id is not None and message.conversation_id != conversation_id:
+                raise ValueError("Conversation message does not belong to the requested conversation.")
+            if thread_id is not None and message.thread_id != thread_id:
+                raise ValueError("Conversation message does not belong to the requested thread.")
+
+        links = list(self._knowledge_links)
+        if conversation_id is not None:
+            links = [link for link in links if link.conversation_id == conversation_id]
+        if thread_id is not None:
+            links = [link for link in links if link.thread_id == thread_id]
+        if message_id is not None:
+            links = [link for link in links if link.message_id == message_id]
+        return links
+
+    def _store_knowledge_link(
+        self,
+        link: ConversationKnowledgeLink,
+    ) -> ConversationKnowledgeLink:
+        if link in self._knowledge_links:
+            return link
+
+        self._knowledge_links.append(link)
+        self._publish(
+            name="ConversationKnowledgeLinked",
+            payload={
+                "conversation_id": link.conversation_id,
+                "thread_id": link.thread_id,
+                "message_id": link.message_id,
+                "knowledge_asset_id": link.knowledge_asset_id,
+            },
+        )
+        return link
+
+    def _validate_knowledge_asset(self, knowledge_asset_id: str) -> None:
+        if self.knowledge_engine is None:
+            return
+        self.knowledge_engine.get_asset(knowledge_asset_id)
 
     def _publish(self, *, name: str, payload: dict[str, object]) -> None:
         if self.event_bus is None:
