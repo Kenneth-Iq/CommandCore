@@ -8,6 +8,7 @@ export type NavPage =
   | "tools"
   | "conversations"
   | "knowledge"
+  | "workspaces"
   | "health";
 
 export type MetricCard = {
@@ -34,6 +35,17 @@ export type TableRow = {
   meta?: string;
 };
 
+export type PanelData = {
+  title: string;
+  rows: TableRow[];
+};
+
+export type AvailabilityItem = {
+  name: string;
+  available: boolean;
+  detail: string;
+};
+
 export type PageData = {
   title: string;
   eyebrow: string;
@@ -43,16 +55,13 @@ export type PageData = {
     tone: StatusTone;
   };
   metrics: MetricCard[];
-  primaryPanel: {
-    title: string;
-    rows: TableRow[];
-  };
-  secondaryPanel: {
-    title: string;
-    rows: TableRow[];
-  };
+  primaryPanel: PanelData;
+  secondaryPanel: PanelData;
+  tertiaryPanel?: PanelData;
+  availabilityGrid?: AvailabilityItem[];
   activityTitle: string;
   activity: ActivityItem[];
+  emptyState?: string;
 };
 
 export type KernelSnapshot = {
@@ -63,6 +72,7 @@ export type KernelSnapshot = {
   toolDashboard: PageData;
   conversationDashboard: PageData;
   knowledgeDashboard: PageData;
+  workspaceDashboard: PageData;
   healthReadiness: PageData;
 };
 
@@ -74,6 +84,7 @@ export const pageOrder: Array<{ id: NavPage; label: string; short: string }> = [
   { id: "tools", label: "Tool Dashboard", short: "TOOL" },
   { id: "conversations", label: "Conversation Dashboard", short: "CONV" },
   { id: "knowledge", label: "Knowledge Dashboard", short: "KNOW" },
+  { id: "workspaces", label: "Workspace Dashboard", short: "WKSP" },
   { id: "health", label: "Health / Readiness", short: "HLTH" },
 ];
 
@@ -85,40 +96,55 @@ export const mockKernel: KernelSnapshot = {
       "Single-screen operating view across governance, runtime execution, tool flow, knowledge, and readiness.",
     status: { label: "Ready", tone: "ready" },
     metrics: [
-      { label: "Audit Entries", value: 184, hint: "Live operating history", tone: "active" },
-      { label: "Event Store Records", value: 184, hint: "Canonical event history", tone: "complete" },
-      { label: "Dashboard Surfaces", value: 8, hint: "Mocked from current kernel shapes", tone: "idle" },
-      { label: "Kernel Readiness", value: "Green", hint: "No blocking issues", tone: "ready" },
+      { label: "Readiness", value: "Ready", hint: "No blocking issues", tone: "ready" },
+      { label: "Health", value: "Healthy", hint: "Core services visible", tone: "active" },
+      { label: "Event Bus", value: 184, hint: "Live events observed", tone: "active" },
+      { label: "Event Store", value: 184, hint: "Canonical history", tone: "complete" },
+      { label: "Audit Entries", value: 184, hint: "Operational trace", tone: "active" },
     ],
     primaryPanel: {
-      title: "Subsystem Status",
+      title: "Kernel Signals",
       rows: [
-        { title: "Executive Governance", subtitle: "Objectives, directives, outcomes", badge: "Nominal", badgeTone: "ready", meta: "1 active review lane" },
-        { title: "Mission Operations", subtitle: "Mission throughput and task flow", badge: "Stable", badgeTone: "active", meta: "4 terminal missions tracked" },
-        { title: "Agent Runtime", subtitle: "Assignments and execution flow", badge: "Online", badgeTone: "ready", meta: "2 active workers" },
-        { title: "Tool Runtime", subtitle: "Mocked invocation telemetry", badge: "Live", badgeTone: "active", meta: "6 invocations this cycle" },
+        { title: "Executive Surface", subtitle: "Objective governance and outcome visibility", badge: "Ready", badgeTone: "ready" },
+        { title: "Mission Surface", subtitle: "Mission throughput and task-state visibility", badge: "Live", badgeTone: "active" },
+        { title: "Tool Surface", subtitle: "Registered tool and invocation telemetry", badge: "Online", badgeTone: "active" },
       ],
     },
     secondaryPanel: {
-      title: "Kernel Notes",
+      title: "Runtime Counts",
       rows: [
-        { title: "Frontend-only MVP", subtitle: "No backend API calls in this milestone", badge: "Static", badgeTone: "idle" },
-        { title: "Operating Theme", subtitle: "Dark console aesthetic with governed status language", badge: "Applied", badgeTone: "complete" },
-        { title: "Navigation Model", subtitle: "Single-app sidebar switching between command surfaces", badge: "Active", badgeTone: "active" },
+        { title: "Agent Runtime", subtitle: "8 assignments / 6 executions", badge: "Visible", badgeTone: "active" },
+        { title: "Tool Runtime", subtitle: "5 tools / 6 invocations", badge: "Visible", badgeTone: "active" },
+        { title: "Knowledge Layer", subtitle: "24 assets / 18 relationships", badge: "Indexed", badgeTone: "complete" },
       ],
     },
+    tertiaryPanel: {
+      title: "Recent Kernel Notes",
+      rows: [
+        { title: "Frontend-only slice", subtitle: "Live API + mock fallback active", badge: "Static", badgeTone: "idle" },
+        { title: "Observability first", subtitle: "Read-only operating dashboard", badge: "Applied", badgeTone: "complete" },
+      ],
+    },
+    availabilityGrid: [
+      { name: "event_store", available: true, detail: "Canonical event history visible" },
+      { name: "audit_trail", available: true, detail: "Operational trace aligned" },
+      { name: "agent_runtime", available: true, detail: "Assignments and executions online" },
+      { name: "tool_runtime", available: true, detail: "Invocation telemetry online" },
+      { name: "conversation_engine", available: true, detail: "Message and context tracking visible" },
+      { name: "executive_reporting", available: true, detail: "Governance dashboard available" },
+    ],
     activityTitle: "Recent Kernel Activity",
     activity: [
       { id: "k1", eventName: "ExecutiveMissionCompleted", source: "commandcore.executive.orchestrator", occurredAt: "04:18 UTC", detail: "Alpha-5 planning mission closed with summary output.", tone: "complete" },
       { id: "k2", eventName: "ToolInvocationCompleted", source: "commandcore.tools.runtime", occurredAt: "04:11 UTC", detail: "Knowledge Search returned 3 matched assets.", tone: "active" },
       { id: "k3", eventName: "ConversationKnowledgeLinked", source: "commandcore.conversations.engine", occurredAt: "03:58 UTC", detail: "Mission planning thread linked to operating runbook.", tone: "idle" },
     ],
+    emptyState: "Kernel activity will appear here when the API exposes audit summaries.",
   },
   executiveDashboard: {
     eyebrow: "Governance / Strategy Layer",
     title: "Executive Dashboard",
-    description:
-      "Objective flow, policy outcomes, and executive directives represented in the same shape as the current reporting services.",
+    description: "Objective flow, policy outcomes, and executive directives from the current reporting services.",
     status: { label: "Nominal", tone: "ready" },
     metrics: [
       { label: "Objectives", value: 3, hint: "Tracked this cycle" },
@@ -148,12 +174,12 @@ export const mockKernel: KernelSnapshot = {
       { id: "e2", eventName: "ExecutiveMissionCreated", source: "commandcore.executive.orchestrator", occurredAt: "03:49 UTC", detail: "Objective obj-alpha5 created a new governed mission.", tone: "active" },
       { id: "e3", eventName: "ExecutiveMissionCompleted", source: "commandcore.executive.orchestrator", occurredAt: "03:33 UTC", detail: "Outcome captured and mission marked terminal.", tone: "complete" },
     ],
+    emptyState: "No governance events available yet.",
   },
   missionDashboard: {
     eyebrow: "Operations / Mission Engine",
     title: "Mission Dashboard",
-    description:
-      "Mission state, throughput, assigned agents, and mission-linked runtime flow styled as a live console rail.",
+    description: "Mission state, throughput, assigned agents, and mission-linked runtime flow.",
     status: { label: "Active", tone: "active" },
     metrics: [
       { label: "Total Missions", value: 6, hint: "Across current operating slice" },
@@ -183,12 +209,12 @@ export const mockKernel: KernelSnapshot = {
       { id: "m2", eventName: "AgentMissionExecutionStarted", source: "commandcore.agents.mission_assignment", occurredAt: "03:57 UTC", detail: "Agent agent-hermes began task execution for mission-alpha5-ui.", tone: "active" },
       { id: "m3", eventName: "MissionFailed", source: "commandcore.mission.engine", occurredAt: "03:21 UTC", detail: "Connector sync mission recorded a recoverable failure.", tone: "warning" },
     ],
+    emptyState: "No mission activity has been recorded yet.",
   },
   agentDashboard: {
     eyebrow: "Runtime / Agent Control",
     title: "Agent Dashboard",
-    description:
-      "Availability, assignment flow, and execution telemetry for the current in-memory workforce layer.",
+    description: "Availability, assignment flow, and execution telemetry for the current in-memory workforce layer.",
     status: { label: "Online", tone: "ready" },
     metrics: [
       { label: "Agents", value: 4, hint: "Registered workforce nodes" },
@@ -218,12 +244,12 @@ export const mockKernel: KernelSnapshot = {
       { id: "a2", eventName: "AgentExecutionStarted", source: "commandcore.agents.runtime", occurredAt: "03:54 UTC", detail: "agent-claw started an internal runtime assignment.", tone: "active" },
       { id: "a3", eventName: "AgentExecutionFailed", source: "commandcore.agents.runtime", occurredAt: "03:17 UTC", detail: "agent-sentinel recorded a failed execution.", tone: "warning" },
     ],
+    emptyState: "No agent execution events available yet.",
   },
   toolDashboard: {
     eyebrow: "Execution / Tool Runtime",
     title: "Tool Dashboard",
-    description:
-      "First-pass view of registered tools, permission mix, and invocation telemetry for the in-memory runtime foundation.",
+    description: "Registered tools, permission mix, and invocation telemetry for the in-memory runtime foundation.",
     status: { label: "Live", tone: "active" },
     metrics: [
       { label: "Registered Tools", value: 5, hint: "Safe + restricted surfaces" },
@@ -253,12 +279,12 @@ export const mockKernel: KernelSnapshot = {
       { id: "t2", eventName: "ToolInvocationStarted", source: "commandcore.tools.runtime", occurredAt: "04:07 UTC", detail: "Knowledge Search invocation entered running state.", tone: "active" },
       { id: "t3", eventName: "ToolInvocationFailed", source: "commandcore.tools.runtime", occurredAt: "03:46 UTC", detail: "Connector Sweep rejected with disabled execution error.", tone: "warning" },
     ],
+    emptyState: "No tool events available yet.",
   },
   conversationDashboard: {
     eyebrow: "Coordination / Conversation Engine",
     title: "Conversation Dashboard",
-    description:
-      "Threads, messages, context records, and knowledge link visibility for the current in-memory conversation layer.",
+    description: "Threads, messages, context records, and knowledge link visibility for the current in-memory conversation layer.",
     status: { label: "Contextual", tone: "ready" },
     metrics: [
       { label: "Conversations", value: 3, hint: "Top-level records" },
@@ -288,12 +314,12 @@ export const mockKernel: KernelSnapshot = {
       { id: "c2", eventName: "ConversationContextAttached", source: "commandcore.conversations.engine", occurredAt: "04:02 UTC", detail: "Mission scope context attached to governance review thread.", tone: "ready" },
       { id: "c3", eventName: "ConversationKnowledgeLinked", source: "commandcore.conversations.engine", occurredAt: "03:41 UTC", detail: "Message linked to launch runbook asset.", tone: "idle" },
     ],
+    emptyState: "No conversation activity has been published yet.",
   },
   knowledgeDashboard: {
     eyebrow: "Memory / Knowledge Layer",
     title: "Knowledge Dashboard",
-    description:
-      "Workspace knowledge density and relationship coverage represented from the current workspace dashboard shape plus kernel counts.",
+    description: "Knowledge asset density and relationship coverage across the current workspace estate.",
     status: { label: "Indexed", tone: "ready" },
     metrics: [
       { label: "Assets", value: 24, hint: "Knowledge records in mock scope" },
@@ -323,12 +349,47 @@ export const mockKernel: KernelSnapshot = {
       { id: "g2", eventName: "KnowledgeAssetsLinked", source: "commandcore.knowledge.engine", occurredAt: "03:55 UTC", detail: "Mission debrief linked to operating checklist.", tone: "active" },
       { id: "g3", eventName: "WorkspaceCreated", source: "commandcore.registries.workspace", occurredAt: "03:18 UTC", detail: "ws-ops added to mock estate.", tone: "idle" },
     ],
+    emptyState: "No knowledge events are currently available.",
+  },
+  workspaceDashboard: {
+    eyebrow: "Estate / Workspace Layer",
+    title: "Workspace Dashboard",
+    description: "Workspace counts, knowledge coverage, and recent workspace-linked activity.",
+    status: { label: "Tracked", tone: "ready" },
+    metrics: [
+      { label: "Workspaces", value: 4, hint: "Visible workspace records" },
+      { label: "With Knowledge", value: 3, hint: "Workspaces with assets", tone: "active" },
+      { label: "Assets", value: 24, hint: "Knowledge records" },
+      { label: "Relationships", value: 18, hint: "Cross-links", tone: "complete" },
+    ],
+    primaryPanel: {
+      title: "Workspace Coverage",
+      rows: [
+        { title: "ws-local", subtitle: "9 assets attached", badge: "Primary", badgeTone: "active" },
+        { title: "ws-ops", subtitle: "7 assets attached", badge: "Stable", badgeTone: "ready" },
+        { title: "ws-labs", subtitle: "5 assets attached", badge: "Growing", badgeTone: "idle" },
+      ],
+    },
+    secondaryPanel: {
+      title: "Knowledge Relationship Density",
+      rows: [
+        { title: "ws-local", subtitle: "6 linked relationships", badge: "Dense", badgeTone: "complete" },
+        { title: "ws-ops", subtitle: "5 linked relationships", badge: "Healthy", badgeTone: "ready" },
+        { title: "ws-labs", subtitle: "4 linked relationships", badge: "Moderate", badgeTone: "idle" },
+      ],
+    },
+    activityTitle: "Recent Workspace Activity",
+    activity: [
+      { id: "w1", eventName: "WorkspaceCreated", source: "commandcore.registries.workspace", occurredAt: "04:01 UTC", detail: "ws-alpha5 created for UI operations.", tone: "active" },
+      { id: "w2", eventName: "KnowledgeAssetCreated", source: "commandcore.knowledge.engine", occurredAt: "03:53 UTC", detail: "Runbook asset attached to ws-local.", tone: "complete" },
+      { id: "w3", eventName: "KnowledgeAssetsLinked", source: "commandcore.knowledge.engine", occurredAt: "03:32 UTC", detail: "Workspace research note linked to mission debrief.", tone: "idle" },
+    ],
+    emptyState: "No workspace events are currently available.",
   },
   healthReadiness: {
     eyebrow: "Observability / Health + Readiness",
     title: "Health / Readiness",
-    description:
-      "Point-in-time kernel posture derived from readiness checks, warning conditions, and snapshot counts.",
+    description: "Point-in-time kernel posture derived from readiness checks, warning conditions, and snapshot counts.",
     status: { label: "Ready", tone: "ready" },
     metrics: [
       { label: "Readiness Status", value: "Ready", hint: "No blocking issues", tone: "ready" },
@@ -358,6 +419,7 @@ export const mockKernel: KernelSnapshot = {
       { id: "h2", eventName: "ReadinessEvaluated", source: "mock.nexus-console", occurredAt: "04:20 UTC", detail: "No blocking issues or warnings in displayed console state.", tone: "ready" },
       { id: "h3", eventName: "ToolInvocationCompleted", source: "commandcore.tools.runtime", occurredAt: "04:15 UTC", detail: "Recent runtime completion keeps tool layer visibly healthy.", tone: "complete" },
     ],
+    emptyState: "No health signals are currently available.",
   },
 };
 
@@ -369,5 +431,6 @@ export const pageMap: Record<NavPage, PageData> = {
   tools: mockKernel.toolDashboard,
   conversations: mockKernel.conversationDashboard,
   knowledge: mockKernel.knowledgeDashboard,
+  workspaces: mockKernel.workspaceDashboard,
   health: mockKernel.healthReadiness,
 };
