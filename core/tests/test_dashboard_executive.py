@@ -103,8 +103,10 @@ def test_executive_dashboard_service_reports_objectives_policy_and_outcomes():
     assert directives["count"] == 1
     assert len(policy_blocks) == 1
     assert policy_blocks[0]["payload"]["target_id"] == "obj-blocked"
+    assert policy_blocks[0]["event_type"] is not None
     assert len(policy_warnings) == 1
     assert policy_warnings[0]["payload"]["target_id"] == "obj-warned"
+    assert policy_warnings[0]["event_type"] is not None
     assert outcomes["count"] == 2
     assert [record.outcome for record in outcomes["by_objective"]["obj-allowed"]] == [
         "Allowed objective completed."

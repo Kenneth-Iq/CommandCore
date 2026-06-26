@@ -6,7 +6,8 @@ from dataclasses import dataclass
 
 from commandcore.audit import InMemoryAuditTrail
 from commandcore.conversations import InMemoryConversationEngine
-from commandcore.events import Event
+
+from .serializers import serialize_event
 
 
 CONVERSATION_ACTIVITY_EVENTS = {
@@ -73,7 +74,7 @@ class ConversationDashboardService:
 
     def recent_conversation_activity(self, limit: int = 10) -> list[dict[str, object]]:
         events = [
-            self._serialize_event(event)
+            serialize_event(event)
             for event in self.audit_trail.list_entries()
             if event.payload.get("event_name") in CONVERSATION_ACTIVITY_EVENTS
         ]
@@ -81,7 +82,7 @@ class ConversationDashboardService:
 
     def recent_message_activity(self, limit: int = 10) -> list[dict[str, object]]:
         events = [
-            self._serialize_event(event)
+            serialize_event(event)
             for event in self.audit_trail.list_entries()
             if event.payload.get("event_name") in MESSAGE_ACTIVITY_EVENTS
         ]
@@ -154,13 +155,3 @@ class ConversationDashboardService:
             "content": getattr(context, "content"),
         }
 
-    @staticmethod
-    def _serialize_event(event: Event) -> dict[str, object]:
-        return {
-            "event_id": event.id,
-            "event_name": event.payload.get("event_name"),
-            "event_type": event.type,
-            "source": event.source,
-            "occurred_at": event.occurred_at,
-            "payload": dict(event.payload),
-        }

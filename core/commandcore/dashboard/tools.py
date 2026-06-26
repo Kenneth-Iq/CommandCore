@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from commandcore.audit import InMemoryAuditTrail
+
+from .serializers import serialize_event
 from commandcore.tools import InMemoryToolRegistry, InMemoryToolRuntime, ToolRuntimeStatus
 
 TOOL_ACTIVITY_EVENTS = {
@@ -84,7 +86,7 @@ class ToolDashboardService:
 
     def recent_tool_activity(self, limit: int = 10) -> list[dict[str, object]]:
         events = [
-            self._serialize_event(event)
+            serialize_event(event)
             for event in self.audit_trail.list_entries()
             if event.payload.get("event_name") in TOOL_ACTIVITY_EVENTS
         ]
@@ -128,13 +130,3 @@ class ToolDashboardService:
             "output_payload": dict(getattr(invocation, "output_payload")),
         }
 
-    @staticmethod
-    def _serialize_event(event: object) -> dict[str, object]:
-        return {
-            "event_id": getattr(event, "id"),
-            "event_name": getattr(event, "payload").get("event_name"),
-            "event_type": getattr(event, "type"),
-            "source": getattr(event, "source"),
-            "occurred_at": getattr(event, "occurred_at"),
-            "payload": dict(getattr(event, "payload")),
-        }

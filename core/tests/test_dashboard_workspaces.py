@@ -143,6 +143,7 @@ def test_workspace_dashboard_service_reports_workspace_knowledge_and_activity():
     }
     assert any(event["event_name"] == "WorkspaceCreated" for event in recent_activity)
     assert any(event["event_name"] == "KnowledgeAssetsLinked" for event in recent_activity)
+    assert all(event["event_type"] is not None for event in recent_activity)
     assert knowledge_assets[0]["asset_id"] == "know-local"
     assert knowledge_assets[0]["relationship_count"] == 1
     assert knowledge_assets[0]["linked_asset_ids"] == ["know-remote"]

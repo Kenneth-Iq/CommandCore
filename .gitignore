@@ -14,3 +14,4 @@ core/.venv/
 apps/nexus-console/node_modules/
 apps/nexus-console/dist/
 apps/nexus-console/*.tsbuildinfo
+node_modules/

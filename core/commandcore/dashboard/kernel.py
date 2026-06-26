@@ -8,6 +8,7 @@ from commandcore.bootstrap import CommandCoreKernel
 from commandcore.events import EventType
 
 from .agents import AgentDashboardService
+from .serializers import serialize_event
 from .conversations import ConversationDashboardService
 from .executive import ExecutiveDashboardService
 from .missions import MissionDashboardService
@@ -96,16 +97,7 @@ class KernelOverviewDashboardService:
                 "lifecycle": len(self.kernel.audit_trail.list_by_event_type(EventType.LIFECYCLE)),
                 "system": len(self.kernel.audit_trail.list_by_event_type(EventType.SYSTEM)),
             },
-            "recent_entries": [
-                {
-                    "event_id": entry.id,
-                    "event_name": entry.payload.get("event_name"),
-                    "event_type": entry.type,
-                    "source": entry.source,
-                    "occurred_at": entry.occurred_at,
-                }
-                for entry in entries[-10:]
-            ],
+            "recent_entries": [serialize_event(entry) for entry in entries[-10:]],
         }
 
     def build_overview(self) -> dict[str, object]:

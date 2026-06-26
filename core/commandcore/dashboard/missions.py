@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from commandcore.agents import InMemoryAgentRuntime
 from commandcore.audit import InMemoryAuditTrail
 from commandcore.contracts import MissionStatus
-from commandcore.events import Event
+
+from .serializers import serialize_event
 from commandcore.mission import MissionEngine
 
 
@@ -105,7 +106,7 @@ class MissionDashboardService:
 
     def recent_mission_activity(self, limit: int = 10) -> list[dict[str, object]]:
         events = [
-            self._serialize_event(event)
+            serialize_event(event)
             for event in self.audit_trail.list_entries()
             if event.payload.get("event_name") in MISSION_ACTIVITY_EVENTS
         ]
@@ -158,13 +159,3 @@ class MissionDashboardService:
             if execution.mission_id is not None and execution.status == status
         ]
 
-    @staticmethod
-    def _serialize_event(event: Event) -> dict[str, object]:
-        return {
-            "event_id": event.id,
-            "event_name": event.payload.get("event_name"),
-            "event_type": event.type,
-            "source": event.source,
-            "occurred_at": event.occurred_at,
-            "payload": dict(event.payload),
-        }

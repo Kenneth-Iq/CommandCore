@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from commandcore.audit import InMemoryAuditTrail
-from commandcore.events import Event
 from commandcore.knowledge import InMemoryKnowledgeEngine
+
+from .serializers import serialize_event
 from commandcore.registries import (
     CapabilityRegistry,
     CompanyRegistry,
@@ -74,7 +75,7 @@ class WorkspaceDashboardService:
 
     def recent_workspace_activity(self, limit: int = 10) -> list[dict[str, object]]:
         events = [
-            self._serialize_event(event)
+            serialize_event(event)
             for event in self.audit_trail.list_entries()
             if event.payload.get("event_name") in WORKSPACE_ACTIVITY_EVENTS
         ]
@@ -221,12 +222,3 @@ class WorkspaceDashboardService:
         target_asset = self.knowledge_engine.get_asset(relationship[1])
         return source_asset.workspace_id == workspace_id or target_asset.workspace_id == workspace_id
 
-    @staticmethod
-    def _serialize_event(event: Event) -> dict[str, object]:
-        return {
-            "event_id": event.id,
-            "event_name": event.payload.get("event_name"),
-            "source": event.source,
-            "occurred_at": event.occurred_at,
-            "payload": dict(event.payload),
-        }

@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from commandcore.audit import InMemoryAuditTrail
-from commandcore.events import Event
 from commandcore.executive import ExecutiveReportingService, ExecutiveStateStore
+
+from .serializers import serialize_event
 
 
 @dataclass(slots=True)
@@ -49,7 +50,7 @@ class ExecutiveDashboardService:
 
     def policy_blocks(self) -> list[dict[str, object]]:
         return [
-            self._serialize_event(event)
+            serialize_event(event)
             for event in self.audit_trail.list_entries()
             if event.payload.get("event_name") == "ExecutivePolicyGateChecked"
             and event.payload.get("status") == "blocked"
@@ -57,7 +58,7 @@ class ExecutiveDashboardService:
 
     def policy_warnings(self) -> list[dict[str, object]]:
         return [
-            self._serialize_event(event)
+            serialize_event(event)
             for event in self.audit_trail.list_entries()
             if event.payload.get("event_name") == "ExecutivePolicyGateChecked"
             and event.payload.get("status") == "allowed_with_warnings"
@@ -80,12 +81,3 @@ class ExecutiveDashboardService:
             "executive_outcomes": self.executive_outcomes(),
         }
 
-    @staticmethod
-    def _serialize_event(event: Event) -> dict[str, object]:
-        return {
-            "event_id": event.id,
-            "event_name": event.payload.get("event_name"),
-            "source": event.source,
-            "occurred_at": event.occurred_at,
-            "payload": dict(event.payload),
-        }
