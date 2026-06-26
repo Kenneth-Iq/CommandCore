@@ -1,9 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DependencyGraph } from "../components/DependencyGraph";
 import { ExecutiveAlerts, severityFromTone } from "../components/ExecutiveAlerts";
 import { ExecutiveFocusPanel, emptyFocusState, type ExecutiveFocusState } from "../components/ExecutiveFocusPanel";
 import { ExecutiveHealthBoard } from "../components/ExecutiveHealthBoard";
 import { EnterpriseExplorer } from "../components/EnterpriseExplorer";
+import { ApprovalCardsPanel } from "../components/ApprovalCardsPanel";
+import { BriefingTypeExplorer } from "../components/BriefingTypeExplorer";
+import { ConversationContextBar } from "../components/ConversationContextBar";
+import { ConversationMemoryTimeline } from "../components/ConversationMemoryTimeline";
+import { DecisionQueuePanel } from "../components/DecisionQueuePanel";
+import { EvidenceCrossReferenceGraph } from "../components/EvidenceCrossReferenceGraph";
+import { EvidenceExplorer } from "../components/EvidenceExplorer";
+import { EvidenceTimeline } from "../components/EvidenceTimeline";
+import { ExecutiveBriefingPanel } from "../components/ExecutiveBriefingPanel";
+import { JarvisConversationPanel } from "../components/JarvisConversationPanel";
+import { PendingFollowUpsPanel } from "../components/PendingFollowUpsPanel";
+import { RecommendationCentre } from "../components/RecommendationCentre";
 import { ExecutiveSimulationPanel } from "../components/ExecutiveSimulationPanel";
 import { RecentlyViewedPanel } from "../components/RecentlyViewedPanel";
 import { MetricCard } from "../components/MetricCard";
@@ -29,6 +41,19 @@ import type {
 } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeAssetRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
 import { buildWorldSummary, buildWorldTree, type WorldData } from "../worldModel";
+import {
+  buildApprovalCards,
+  buildBriefings,
+  buildConversationContext,
+  buildConversationMemory,
+  buildDecisionQueue,
+  buildExtendedBriefings,
+  buildFollowUps,
+  buildRecommendations,
+  buildTimeline,
+  resolveGreeting,
+} from "../executiveAssistant";
+import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { useExecutiveSimulation } from "../simulation";
 import type { RecentlyViewedEntry } from "../operatorPrefs";
 
@@ -134,6 +159,31 @@ export function ExecutiveHome({
   }, [allMissions, agentCentre.profiles, conversationCentre.conversations, focus, knowledgeCentre.assets, portfolioExplorer, toolCentre.tools]);
 
   const simulation = useExecutiveSimulation(world);
+  const [investigation, setInvestigation] = useState<string | undefined>(undefined);
+  const handleInvestigate = useCallback((label: string) => setInvestigation(label), []);
+  const { period: activeBriefingPeriod, greeting } = useMemo(() => resolveGreeting(), []);
+  const briefings = useMemo(() => buildBriefings(world, simulation), [world, simulation]);
+  const recommendations = useMemo(() => buildRecommendations(world, simulation), [world, simulation]);
+  const decisionQueue = useMemo(() => buildDecisionQueue(world, simulation, recommendations), [world, simulation, recommendations]);
+  const pendingFollowUps = useMemo(() => buildFollowUps(world, simulation), [world, simulation]);
+  const approvalCards = useMemo(() => buildApprovalCards(world, simulation), [world, simulation]);
+  const timelineEntries = useMemo(
+    () => buildTimeline(briefings, recommendations, decisionQueue, world),
+    [briefings, recommendations, decisionQueue, world],
+  );
+  const conversationMemory = useMemo(
+    () => buildConversationMemory(timelineEntries, pendingFollowUps, decisionQueue),
+    [timelineEntries, pendingFollowUps, decisionQueue],
+  );
+  const conversationContext = useMemo(
+    () => buildConversationContext(focus, world, investigation),
+    [focus, world, investigation],
+  );
+  const evidenceRegistry = useMemo(
+    () => buildEvidenceRegistry(recommendations, decisionQueue, pendingFollowUps, approvalCards),
+    [recommendations, decisionQueue, pendingFollowUps, approvalCards],
+  );
+  const extendedBriefings = useMemo(() => buildExtendedBriefings(world, simulation, focus), [world, simulation, focus]);
   const healthMetrics = useMemo(() => buildHealthMetrics(pages, filtered), [pages, filtered]);
   const healthMetricsWithSimulation = useMemo(
     () => [
@@ -170,6 +220,30 @@ export function ExecutiveHome({
         title={source === "live" ? "Live executive operational intelligence view" : "Seeded executive operational intelligence view"}
         status={page.status}
       />
+
+      <ConversationContextBar context={conversationContext} />
+
+      <JarvisConversationPanel world={world} simulation={simulation} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+
+      <ExecutiveBriefingPanel greeting={greeting} activePeriod={activeBriefingPeriod} briefings={briefings} />
+
+      <BriefingTypeExplorer briefings={extendedBriefings} onNavigate={onNavigate} />
+
+      <RecommendationCentre recommendations={recommendations} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+
+      <ApprovalCardsPanel approvals={approvalCards} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+
+      <DecisionQueuePanel decisions={decisionQueue} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+
+      <PendingFollowUpsPanel followUps={pendingFollowUps} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+
+      <ConversationMemoryTimeline memory={conversationMemory} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+
+      <EvidenceExplorer registry={evidenceRegistry} simulation={simulation} onNavigate={onNavigate} />
+
+      <EvidenceTimeline registry={evidenceRegistry} onNavigate={onNavigate} />
+
+      <EvidenceCrossReferenceGraph registry={evidenceRegistry} onNavigate={onNavigate} />
 
       <EnterpriseExplorer
         tree={worldTree}

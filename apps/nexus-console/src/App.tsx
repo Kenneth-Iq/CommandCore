@@ -21,6 +21,7 @@ import {
 import { useRecentlyViewed } from "./operatorPrefs";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
+import { ExecutiveBoardroom } from "./pages/ExecutiveBoardroom";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
 import { ExecutiveHome } from "./pages/ExecutiveHome";
 import { HealthReadiness } from "./pages/HealthReadiness";
@@ -257,6 +258,15 @@ export default function App() {
             knowledgeCentre={consoleData.knowledgeCentre}
             world={world}
             selection={route.selection}
+            onNavigate={handleNavigate}
+          />
+        );
+      case "boardroom":
+        return (
+          <ExecutiveBoardroom
+            {...props}
+            pages={consoleData.pages}
+            world={world}
             onNavigate={handleNavigate}
           />
         );

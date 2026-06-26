@@ -10,7 +10,8 @@ export type NavPage =
   | "knowledge"
   | "workspaces"
   | "health"
-  | "settings";
+  | "settings"
+  | "boardroom";
 
 export type MetricCard = {
   label: string;
@@ -272,6 +273,7 @@ export type KernelSnapshot = {
   workspaceDashboard: PageData;
   healthReadiness: PageData;
   settingsPage: PageData;
+  boardroomPage: PageData;
 };
 
 export type NavItem = { id: NavPage; label: string; short: string };
@@ -285,6 +287,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: "kernel", label: "Home", short: "HOME" },
       { id: "executive", label: "Governance", short: "GOV" },
+      { id: "boardroom", label: "Boardroom", short: "HQ" },
     ],
   },
   {
@@ -685,6 +688,37 @@ export const mockKernel: KernelSnapshot = {
     ],
     emptyState: "Settings activity will appear here once console preferences are implemented.",
   },
+  boardroomPage: {
+    eyebrow: "Executive / Headquarters",
+    title: "Executive Boardroom",
+    description: "A configurable executive headquarters: status, mission, agent, and health walls, watchlists, and favourite dashboards in one operator-arranged surface.",
+    status: { label: "Configurable", tone: "active" },
+    metrics: [
+      { label: "Walls Available", value: 4, hint: "Status, Mission, Agent, Health", tone: "active" },
+      { label: "Layout", value: "Persistent", hint: "Saved to this browser", tone: "ready" },
+      { label: "Watchlist", value: 0, hint: "Pinned records", tone: "idle" },
+      { label: "Favourite Dashboards", value: 0, hint: "Quick-launch pages", tone: "idle" },
+    ],
+    primaryPanel: {
+      title: "Boardroom Controls",
+      rows: [
+        { title: "Resizable Walls", subtitle: "Each wall can be resized between compact, standard, and expanded.", badge: "Configurable", badgeTone: "active" },
+        { title: "Reorderable Walls", subtitle: "Move walls up or down to match how you work.", badge: "Configurable", badgeTone: "active" },
+      ],
+    },
+    secondaryPanel: {
+      title: "Current State",
+      rows: [
+        { title: "Read-only milestone", subtitle: "No write controls are enabled in the Boardroom.", badge: "Safe", badgeTone: "ready" },
+        { title: "Layout Storage", subtitle: "Layout, watchlist, and favourites persist to local browser storage only.", badge: "Local", badgeTone: "idle" },
+      ],
+    },
+    activityTitle: "Recent Boardroom Signals",
+    activity: [
+      { id: "b1", eventName: "BoardroomLayoutReady", source: "nexus-console", occurredAt: "now", detail: "Executive Boardroom is ready to be configured.", tone: "idle" },
+    ],
+    emptyState: "Boardroom activity will appear here once walls are configured.",
+  },
 };
 
 export const mockMissionCentre: MissionCentreData = {
@@ -1043,4 +1077,5 @@ export const pageMap: Record<NavPage, PageData> = {
   workspaces: mockKernel.workspaceDashboard,
   health: mockKernel.healthReadiness,
   settings: mockKernel.settingsPage,
+  boardroom: mockKernel.boardroomPage,
 };

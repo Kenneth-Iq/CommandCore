@@ -8,14 +8,19 @@ import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
 import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { EntityEvidencePanel } from "../components/EntityEvidencePanel";
 import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { NavPage, PageData } from "../data/mockKernel";
 import type { KnowledgeAssetRecord, KnowledgeCentreData } from "../data/nexusCentres";
+import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
+import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
+import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
+import { useExecutiveSimulation } from "../simulation";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type KnowledgeDashboardProps = {
@@ -52,6 +57,15 @@ export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentr
     ? knowledgeCentre.assets.find((asset) => asset.assetId === selection.assetId)
     : undefined;
   const relationshipData = selection.assetId ? buildRelationshipCard("knowledge", selection.assetId, world) : undefined;
+  const simulation = useExecutiveSimulation(world);
+  const evidenceRegistry = useMemo(() => {
+    const recommendations = buildRecommendations(world, simulation);
+    const decisions = buildDecisionQueue(world, simulation, recommendations);
+    const followUps = buildFollowUps(world, simulation);
+    const approvals = buildApprovalCards(world, simulation);
+    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
+  }, [world, simulation]);
+  const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
 
   const scopesOf = (kind: string) => uniqueOptions(
     knowledgeCentre.assets.flatMap((asset) => asset.scopes.filter((scope) => scope.kind === kind).map((scope) => scope.value)),
@@ -132,6 +146,15 @@ export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentr
             return { label: "Open Related Project", page: "workspaces" as NavPage, selection: { projectId: scope.value } };
           })}
           onNavigate={onNavigate}
+          isPinned={isWatched(`knowledge-${selectedAsset.assetId}`)}
+          onTogglePin={() => {
+            const watchId = `knowledge-${selectedAsset.assetId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedAsset.title, page: "knowledge", selection: { assetId: selectedAsset.assetId } });
+            }
+          }}
         />
       ) : (
         <div className="empty-state detail-empty-state">
@@ -145,6 +168,7 @@ export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentr
           <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
           <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
           <RelationshipExplorer centerLabel={selectedAsset?.title ?? "Selected Knowledge Asset"} data={relationshipData} onNavigate={onNavigate} />
+          <EntityEvidencePanel registry={evidenceRegistry} selection={selection} impactAnalysis={buildImpactAnalysis(relationshipData)} relationshipData={relationshipData} onNavigate={onNavigate} />
         </>
       ) : null}
 

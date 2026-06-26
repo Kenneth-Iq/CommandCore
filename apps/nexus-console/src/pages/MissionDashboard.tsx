@@ -14,6 +14,7 @@ import { MissionTimeline } from "../components/MissionTimeline";
 import { PageHeader } from "../components/PageHeader";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { EntityEvidencePanel } from "../components/EntityEvidencePanel";
 import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SortControl, type SortDirection } from "../components/SortControl";
@@ -21,9 +22,12 @@ import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import { missionStatusTone, type ConversationCentreData, type MissionCentreData, type MissionRecord, type NavPage, type PageData } from "../data/mockKernel";
 import type { KnowledgeCentreData } from "../data/nexusCentres";
+import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
+import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
-import { useFavourites, useSavedFilters } from "../operatorPrefs";
+import { useFavourites, useSavedFilters, useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
+import { useExecutiveSimulation } from "../simulation";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type MissionDashboardProps = {
@@ -83,6 +87,7 @@ export function MissionDashboard({
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
 
   const { isFavourite, toggle: toggleFavourite } = useFavourites("mission");
+  const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
   const { savedFilters, save: saveFilters, clear: clearSavedFilters } = useSavedFilters<MissionSavedFilters>("missions", { search: "", filters: emptyFilters });
 
   const missions = useMemo(
@@ -99,6 +104,14 @@ export function MissionDashboard({
     ? knowledgeCentre.assets.find((asset) => asset.scopes.some((scope) => scope.kind === "mission" && scope.value === selectedMission.missionId))
     : undefined;
   const relationshipData = selection.missionId ? buildRelationshipCard("mission", selection.missionId, world) : undefined;
+  const simulation = useExecutiveSimulation(world);
+  const evidenceRegistry = useMemo(() => {
+    const recommendations = buildRecommendations(world, simulation);
+    const decisions = buildDecisionQueue(world, simulation, recommendations);
+    const followUps = buildFollowUps(world, simulation);
+    const approvals = buildApprovalCards(world, simulation);
+    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
+  }, [world, simulation]);
 
   const agentOptions = useMemo(() => uniqueOptions(missions.map((mission) => mission.assignedAgentId)), [missions]);
   const capabilityOptions = useMemo(() => uniqueOptions(missions.flatMap((mission) => mission.capabilityIds)), [missions]);
@@ -217,6 +230,15 @@ export function MissionDashboard({
             ...(selectedAsset ? [{ label: "Open Related Knowledge", page: "knowledge" as NavPage, selection: { assetId: selectedAsset.assetId } }] : []),
           ]}
           onNavigate={onNavigate}
+          isPinned={isWatched(`mission-${selectedMission.missionId}`)}
+          onTogglePin={() => {
+            const watchId = `mission-${selectedMission.missionId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedMission.title, page: "missions", selection: { missionId: selectedMission.missionId } });
+            }
+          }}
         />
       ) : (
         <div className="empty-state detail-empty-state">
@@ -230,6 +252,7 @@ export function MissionDashboard({
           <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
           <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
           <RelationshipExplorer centerLabel={selectedMission?.title ?? "Selected Mission"} data={relationshipData} onNavigate={onNavigate} />
+          <EntityEvidencePanel registry={evidenceRegistry} selection={selection} impactAnalysis={buildImpactAnalysis(relationshipData)} relationshipData={relationshipData} onNavigate={onNavigate} />
         </>
       ) : null}
 

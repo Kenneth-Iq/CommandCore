@@ -1,4 +1,5 @@
 import type { NavPage } from "../data/mockKernel";
+import { FavouriteToggle } from "./FavouriteToggle";
 import { StatusBadge } from "./StatusBadge";
 
 type DetailLink = {
@@ -25,6 +26,8 @@ type RecordDetailPanelProps = {
   meta: string[];
   relatedLinks: DetailLink[];
   onNavigate: (page: NavPage, selection?: DetailLink["selection"]) => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 };
 
 export function RecordDetailPanel({
@@ -36,12 +39,20 @@ export function RecordDetailPanel({
   meta,
   relatedLinks,
   onNavigate,
+  isPinned,
+  onTogglePin,
 }: RecordDetailPanelProps) {
   return (
     <section className="panel surface record-detail-panel">
       <div className="panel-header">
         <div className="panel-title-stack">
-          <h3>{title}</h3>
+          <h3>
+            {onTogglePin ? (
+              <FavouriteToggle active={isPinned ?? false} onToggle={onTogglePin} label="watchlist record" />
+            ) : null}
+            {" "}
+            {title}
+          </h3>
           <span>{eyebrow}</span>
         </div>
         <StatusBadge tone={statusTone}>{statusLabel}</StatusBadge>

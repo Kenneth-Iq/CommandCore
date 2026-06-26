@@ -103,6 +103,7 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
         workspaces: buildWorkspaceDashboard(workspaces),
         health: buildHealthDashboard(health, readiness),
         settings: pageMap.settings,
+        boardroom: pageMap.boardroom,
       },
       missionCentre: buildMissionCentre(missions),
       agentCentre: buildAgentCentre(agents),

@@ -8,6 +8,7 @@ import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
 import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { EntityEvidencePanel } from "../components/EntityEvidencePanel";
 import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
@@ -19,8 +20,12 @@ import { ToolPermissionBreakdown } from "../components/ToolPermissionBreakdown";
 import { ToolRegistryPanel } from "../components/ToolRegistryPanel";
 import type { DataSource } from "../api/commandcoreApi";
 import { toolPermissionTone, type NavPage, type PageData, type ToolCentreData, type ToolRecord } from "../data/mockKernel";
+import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
+import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
+import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
+import { useExecutiveSimulation } from "../simulation";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type ToolDashboardProps = {
@@ -60,6 +65,15 @@ export function ToolDashboard({ page, toolCentre, world, selection, source, sour
       ].find((invocation) => invocation.toolId === selectedTool.toolId)
     : undefined;
   const relationshipData = selection.toolId ? buildRelationshipCard("tool", selection.toolId, world) : undefined;
+  const simulation = useExecutiveSimulation(world);
+  const evidenceRegistry = useMemo(() => {
+    const recommendations = buildRecommendations(world, simulation);
+    const decisions = buildDecisionQueue(world, simulation, recommendations);
+    const followUps = buildFollowUps(world, simulation);
+    const approvals = buildApprovalCards(world, simulation);
+    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
+  }, [world, simulation]);
+  const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
 
   const permissionOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.permissionLevel)), [toolCentre.tools]);
   const agentOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.agentId)), [toolCentre.tools]);
@@ -118,6 +132,15 @@ export function ToolDashboard({ page, toolCentre, world, selection, source, sour
             { label: "Open Tool Detail", page: "tools" as NavPage, selection: { toolId: selectedTool.toolId } },
           ]}
           onNavigate={onNavigate}
+          isPinned={isWatched(`tool-${selectedTool.toolId}`)}
+          onTogglePin={() => {
+            const watchId = `tool-${selectedTool.toolId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedTool.name, page: "tools", selection: { toolId: selectedTool.toolId } });
+            }
+          }}
         />
       ) : (
         <div className="empty-state detail-empty-state">
@@ -131,6 +154,7 @@ export function ToolDashboard({ page, toolCentre, world, selection, source, sour
           <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
           <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
           <RelationshipExplorer centerLabel={selectedTool?.name ?? "Selected Tool"} data={relationshipData} onNavigate={onNavigate} />
+          <EntityEvidencePanel registry={evidenceRegistry} selection={selection} impactAnalysis={buildImpactAnalysis(relationshipData)} relationshipData={relationshipData} onNavigate={onNavigate} />
         </>
       ) : null}
 

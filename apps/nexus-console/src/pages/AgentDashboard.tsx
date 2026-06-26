@@ -13,6 +13,7 @@ import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmen
 import { PageHeader } from "../components/PageHeader";
 import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { EntityEvidencePanel } from "../components/EntityEvidencePanel";
 import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
@@ -20,9 +21,12 @@ import { SortControl, type SortDirection } from "../components/SortControl";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import { agentRuntimeTone, type AgentCentreData, type AgentProfile, type NavPage, type PageData } from "../data/mockKernel";
+import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
+import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
-import { useFavourites } from "../operatorPrefs";
+import { useFavourites, useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
+import { useExecutiveSimulation } from "../simulation";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type AgentDashboardProps = {
@@ -59,6 +63,7 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
   const [sortBy, setSortBy] = useState("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const { isFavourite, toggle: toggleFavourite } = useFavourites("agent");
+  const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
 
   const failedAgentIds = new Set(agentCentre.executions.failed.map((execution) => execution.agentId));
   const selectedAgent = selection.agentId
@@ -68,6 +73,14 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
     ? agentCentre.assignments.find((assignment) => assignment.agentId === selectedAgent.agentId)
     : undefined;
   const relationshipData = selection.agentId ? buildRelationshipCard("agent", selection.agentId, world) : undefined;
+  const simulation = useExecutiveSimulation(world);
+  const evidenceRegistry = useMemo(() => {
+    const recommendations = buildRecommendations(world, simulation);
+    const decisions = buildDecisionQueue(world, simulation, recommendations);
+    const followUps = buildFollowUps(world, simulation);
+    const approvals = buildApprovalCards(world, simulation);
+    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
+  }, [world, simulation]);
 
   const statusOptions = useMemo(() => uniqueOptions(agentCentre.profiles.map((agent) => agent.runtimeStatus)), [agentCentre.profiles]);
   const capabilityOptions = useMemo(() => uniqueOptions(agentCentre.profiles.flatMap((agent) => agent.capabilityIds)), [agentCentre.profiles]);
@@ -146,6 +159,15 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
             ...(selectedAssignment?.missionId ? [{ label: "Open Assignment Mission", page: "missions" as NavPage, selection: { missionId: selectedAssignment.missionId } }] : []),
           ]}
           onNavigate={onNavigate}
+          isPinned={isWatched(`agent-${selectedAgent.agentId}`)}
+          onTogglePin={() => {
+            const watchId = `agent-${selectedAgent.agentId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedAgent.name, page: "agents", selection: { agentId: selectedAgent.agentId } });
+            }
+          }}
         />
       ) : (
         <div className="empty-state detail-empty-state">
@@ -159,6 +181,7 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
           <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
           <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
           <RelationshipExplorer centerLabel={selectedAgent?.name ?? "Selected Agent"} data={relationshipData} onNavigate={onNavigate} />
+          <EntityEvidencePanel registry={evidenceRegistry} selection={selection} impactAnalysis={buildImpactAnalysis(relationshipData)} relationshipData={relationshipData} onNavigate={onNavigate} />
         </>
       ) : null}
 

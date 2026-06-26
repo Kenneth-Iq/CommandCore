@@ -13,14 +13,19 @@ import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
 import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { EntityEvidencePanel } from "../components/EntityEvidencePanel";
 import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import type { ConversationCentreData, ConversationRecord, NavPage, PageData } from "../data/mockKernel";
+import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
+import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
+import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
+import { useExecutiveSimulation } from "../simulation";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type ConversationDashboardProps = {
@@ -61,6 +66,15 @@ export function ConversationDashboard({ page, conversationCentre, world, selecti
     ? conversationCentre.knowledgeLinks.find((link) => link.conversationId === selectedConversation.conversationId)
     : undefined;
   const relationshipData = selection.conversationId ? buildRelationshipCard("conversation", selection.conversationId, world) : undefined;
+  const simulation = useExecutiveSimulation(world);
+  const evidenceRegistry = useMemo(() => {
+    const recommendations = buildRecommendations(world, simulation);
+    const decisions = buildDecisionQueue(world, simulation, recommendations);
+    const followUps = buildFollowUps(world, simulation);
+    const approvals = buildApprovalCards(world, simulation);
+    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
+  }, [world, simulation]);
+  const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
 
   const workspaceOptions = useMemo(() => uniqueOptions(conversationCentre.conversations.map((conversation) => conversation.workspaceId)), [conversationCentre.conversations]);
   const companyOptions = useMemo(() => uniqueOptions(conversationCentre.conversations.map((conversation) => conversation.companyId)), [conversationCentre.conversations]);
@@ -129,6 +143,15 @@ export function ConversationDashboard({ page, conversationCentre, world, selecti
             ...(selectedConversation.workspaceId ? [{ label: "Open Related Workspace", page: "workspaces" as NavPage, selection: { workspaceId: selectedConversation.workspaceId } }] : []),
           ]}
           onNavigate={onNavigate}
+          isPinned={isWatched(`conversation-${selectedConversation.conversationId}`)}
+          onTogglePin={() => {
+            const watchId = `conversation-${selectedConversation.conversationId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedConversation.conversationId, page: "conversations", selection: { conversationId: selectedConversation.conversationId } });
+            }
+          }}
         />
       ) : (
         <div className="empty-state detail-empty-state">
@@ -142,6 +165,7 @@ export function ConversationDashboard({ page, conversationCentre, world, selecti
           <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
           <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
           <RelationshipExplorer centerLabel={selectedConversation?.conversationId ?? "Selected Conversation"} data={relationshipData} onNavigate={onNavigate} />
+          <EntityEvidencePanel registry={evidenceRegistry} selection={selection} impactAnalysis={buildImpactAnalysis(relationshipData)} relationshipData={relationshipData} onNavigate={onNavigate} />
         </>
       ) : null}
 

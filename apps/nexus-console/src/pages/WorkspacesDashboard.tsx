@@ -7,6 +7,7 @@ import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
 import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { EntityEvidencePanel } from "../components/EntityEvidencePanel";
 import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { PortfolioExplorer } from "../components/PortfolioExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
@@ -14,8 +15,12 @@ import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { NavPage, PageData } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
+import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
+import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
+import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
+import { useExecutiveSimulation } from "../simulation";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type WorkspacesDashboardProps = {
@@ -54,6 +59,7 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
   const selectedProject = selection.projectId
     ? portfolioExplorer.projects.find((project) => project.projectId === selection.projectId)
     : undefined;
+  const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
   const hasSelection = Boolean(selection.workspaceId || selection.companyId || selection.projectId);
   const selectionKey = selection.workspaceId ? `workspaceId=${selection.workspaceId}` : selection.companyId ? `companyId=${selection.companyId}` : selection.projectId ? `projectId=${selection.projectId}` : undefined;
   const relationshipData = selection.workspaceId
@@ -63,6 +69,15 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
       : selection.projectId
         ? buildRelationshipCard("project", selection.projectId, world)
         : undefined;
+
+  const simulation = useExecutiveSimulation(world);
+  const evidenceRegistry = useMemo(() => {
+    const recommendations = buildRecommendations(world, simulation);
+    const decisions = buildDecisionQueue(world, simulation, recommendations);
+    const followUps = buildFollowUps(world, simulation);
+    const approvals = buildApprovalCards(world, simulation);
+    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
+  }, [world, simulation]);
 
   const statusOptions = useMemo(() => uniqueOptions([
     ...portfolioExplorer.workspaces.map((workspace) => workspace.status),
@@ -169,6 +184,15 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
             { label: "Open Workspace Missions", page: "missions" as NavPage },
           ]}
           onNavigate={onNavigate}
+          isPinned={isWatched(`workspace-${selectedWorkspace.workspaceId}`)}
+          onTogglePin={() => {
+            const watchId = `workspace-${selectedWorkspace.workspaceId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedWorkspace.name, page: "workspaces", selection: { workspaceId: selectedWorkspace.workspaceId } });
+            }
+          }}
         />
       ) : selectedCompany ? (
         <RecordDetailPanel
@@ -187,6 +211,15 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
             { label: "Open Company Missions", page: "missions" as NavPage },
           ]}
           onNavigate={onNavigate}
+          isPinned={isWatched(`company-${selectedCompany.companyId}`)}
+          onTogglePin={() => {
+            const watchId = `company-${selectedCompany.companyId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedCompany.name, page: "workspaces", selection: { companyId: selectedCompany.companyId } });
+            }
+          }}
         />
       ) : selectedProject ? (
         <RecordDetailPanel
@@ -205,6 +238,15 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
             { label: "Open Project Missions", page: "missions" as NavPage },
           ]}
           onNavigate={onNavigate}
+          isPinned={isWatched(`project-${selectedProject.projectId}`)}
+          onTogglePin={() => {
+            const watchId = `project-${selectedProject.projectId}`;
+            if (isWatched(watchId)) {
+              removeFromWatchlist(watchId);
+            } else {
+              addToWatchlist({ id: watchId, label: selectedProject.name, page: "workspaces", selection: { projectId: selectedProject.projectId } });
+            }
+          }}
         />
       ) : (
         <div className="empty-state detail-empty-state">
@@ -222,6 +264,7 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
             data={relationshipData}
             onNavigate={onNavigate}
           />
+          <EntityEvidencePanel registry={evidenceRegistry} selection={selection} impactAnalysis={buildImpactAnalysis(relationshipData)} relationshipData={relationshipData} onNavigate={onNavigate} />
         </>
       ) : null}
 
