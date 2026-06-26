@@ -79,6 +79,9 @@ class ToolDashboardService:
             counts[key] = counts.get(key, 0) + 1
         return counts
 
+    def tools(self) -> list[dict[str, object]]:
+        return [self._serialize_tool(tool) for tool in self.tool_registry.list_tools()]
+
     def recent_tool_activity(self, limit: int = 10) -> list[dict[str, object]]:
         events = [
             self._serialize_event(event)
@@ -95,7 +98,20 @@ class ToolDashboardService:
             "completed_invocations": self.completed_invocations(),
             "failed_invocations": self.failed_invocations(),
             "tools_by_permission": self.tools_by_permission(),
+            "tools": self.tools(),
             "recent_tool_activity": self.recent_tool_activity(),
+        }
+
+    @staticmethod
+    def _serialize_tool(tool: object) -> dict[str, object]:
+        return {
+            "tool_id": getattr(tool, "id"),
+            "name": getattr(tool, "name"),
+            "description": getattr(tool, "description"),
+            "capability_id": getattr(tool, "capability_id"),
+            "agent_id": getattr(tool, "agent_id"),
+            "permission_level": getattr(tool, "permission_level").value,
+            "status": getattr(tool, "status").value,
         }
 
     @staticmethod

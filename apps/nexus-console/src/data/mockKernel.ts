@@ -100,6 +100,149 @@ export function missionStatusTone(status: string): StatusTone {
   return "idle";
 }
 
+export type AgentProfile = {
+  agentId: string;
+  name: string;
+  role: string;
+  runtimeStatus: string;
+  capabilityIds: string[];
+  missionQueue: string[];
+  stateSummary?: string;
+};
+
+export type AgentAssignmentRecord = {
+  assignmentId: string;
+  agentId: string;
+  missionId?: string;
+  taskId?: string;
+  capabilityId?: string;
+  status: string;
+  error?: string;
+};
+
+export type AgentCentreData = {
+  counts: { total: number; available: number; busy: number; offline: number };
+  assignmentCounts: { total: number; assigned: number; running: number; completed: number; failed: number };
+  profiles: AgentProfile[];
+  assignments: AgentAssignmentRecord[];
+  executions: {
+    active: MissionAgentExecution[];
+    completed: MissionAgentExecution[];
+    failed: MissionAgentExecution[];
+  };
+};
+
+export function agentRuntimeTone(status: string): StatusTone {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("available")) {
+    return "ready";
+  }
+  if (normalized.includes("busy")) {
+    return "active";
+  }
+  if (normalized.includes("offline")) {
+    return "idle";
+  }
+  return "idle";
+}
+
+export type ToolRecord = {
+  toolId: string;
+  name: string;
+  description: string;
+  capabilityId?: string;
+  agentId?: string;
+  permissionLevel: string;
+  status: string;
+};
+
+export type ToolInvocationRecord = {
+  invocationId: string;
+  toolId: string;
+  capabilityId?: string;
+  agentId?: string;
+  permissionLevel: string;
+  status: string;
+  error?: string;
+};
+
+export type ToolCentreData = {
+  counts: { total: number; registered: number };
+  invocationCounts: { total: number; pending: number; running: number; completed: number; failed: number };
+  permissionBreakdown: Record<string, number>;
+  tools: ToolRecord[];
+  invocations: {
+    active: ToolInvocationRecord[];
+    completed: ToolInvocationRecord[];
+    failed: ToolInvocationRecord[];
+  };
+};
+
+export function toolPermissionTone(level: string): StatusTone {
+  const normalized = level.toLowerCase();
+  if (normalized === "safe") {
+    return "ready";
+  }
+  if (normalized === "restricted") {
+    return "warning";
+  }
+  if (normalized === "privileged") {
+    return "blocked";
+  }
+  return "idle";
+}
+
+export type ConversationRecord = {
+  conversationId: string;
+  workspaceId?: string;
+  companyId?: string;
+  projectId?: string;
+  objectiveId?: string;
+  missionId?: string;
+  participantIds: string[];
+};
+
+export type ConversationThreadRecord = {
+  threadId: string;
+  conversationId: string;
+  participantIds: string[];
+};
+
+export type ConversationMessageRecord = {
+  messageId: string;
+  conversationId: string;
+  threadId?: string;
+  participantId: string;
+  role: string;
+  content: string;
+};
+
+export type ConversationKnowledgeLinkRecord = {
+  conversationId: string;
+  threadId?: string;
+  messageId?: string;
+  knowledgeAssetId: string;
+};
+
+export type ConversationContextRecord = {
+  contextId: string;
+  conversationId: string;
+  threadId?: string;
+  missionId?: string;
+  projectId?: string;
+  content: string;
+};
+
+export type ConversationCentreData = {
+  counts: { conversations: number; threads: number; messages: number; knowledgeLinks: number };
+  contextAvailability: { available: boolean; conversationCountWithContext: number; contextRecordCount: number };
+  conversations: ConversationRecord[];
+  threads: ConversationThreadRecord[];
+  messages: ConversationMessageRecord[];
+  knowledgeLinks: ConversationKnowledgeLinkRecord[];
+  contexts: ConversationContextRecord[];
+};
+
 export type PageData = {
   title: string;
   eyebrow: string;
@@ -624,6 +767,269 @@ export const mockMissionCentre: MissionCentreData = {
       },
     ],
   },
+};
+
+export const mockAgentCentre: AgentCentreData = {
+  counts: { total: 4, available: 2, busy: 1, offline: 1 },
+  assignmentCounts: { total: 3, assigned: 0, running: 1, completed: 1, failed: 1 },
+  profiles: [
+    {
+      agentId: "agent-hermes",
+      name: "agent-hermes",
+      role: "operations",
+      runtimeStatus: "busy",
+      capabilityIds: ["cap-ui", "cap-search"],
+      missionQueue: ["mission-alpha5-ui"],
+      stateSummary: "Actively executing Alpha-5 UI review tasks.",
+    },
+    {
+      agentId: "agent-claw",
+      name: "agent-claw",
+      role: "operations",
+      runtimeStatus: "available",
+      capabilityIds: ["cap-ops"],
+      missionQueue: [],
+      stateSummary: "Completed mission-alpha5-ops executions and is ready for reassignment.",
+    },
+    {
+      agentId: "agent-sentinel",
+      name: "agent-sentinel",
+      role: "reliability",
+      runtimeStatus: "available",
+      capabilityIds: ["cap-recovery"],
+      missionQueue: [],
+      stateSummary: "Recorded a failed connector recovery execution; awaiting reassignment.",
+    },
+    {
+      agentId: "agent-athena",
+      name: "agent-athena",
+      role: "reliability",
+      runtimeStatus: "offline",
+      capabilityIds: ["cap-monitoring"],
+      missionQueue: [],
+      stateSummary: "Offline. No active runtime assignments.",
+    },
+  ],
+  assignments: [
+    {
+      assignmentId: "assign-ui",
+      agentId: "agent-hermes",
+      missionId: "mission-alpha5-ui",
+      taskId: "task-ui-2",
+      capabilityId: "cap-ui",
+      status: "running",
+    },
+    {
+      assignmentId: "assign-ops",
+      agentId: "agent-claw",
+      missionId: "mission-alpha5-ops",
+      taskId: "task-ops-2",
+      capabilityId: "cap-ops",
+      status: "completed",
+    },
+    {
+      assignmentId: "assign-recovery",
+      agentId: "agent-sentinel",
+      missionId: "mission-alpha5-recovery",
+      taskId: "task-recovery-1",
+      capabilityId: "cap-recovery",
+      status: "failed",
+      error: "Connector timeout after 3 retries.",
+    },
+  ],
+  executions: {
+    active: [
+      {
+        executionId: "exec-204",
+        agentId: "agent-hermes",
+        missionId: "mission-alpha5-ui",
+        taskId: "task-ui-2",
+        capabilityId: "cap-ui",
+        status: "running",
+      },
+    ],
+    completed: [
+      {
+        executionId: "exec-203",
+        agentId: "agent-claw",
+        missionId: "mission-alpha5-ops",
+        taskId: "task-ops-1",
+        capabilityId: "cap-ops",
+        status: "completed",
+      },
+      {
+        executionId: "exec-202",
+        agentId: "agent-claw",
+        missionId: "mission-alpha5-ops",
+        taskId: "task-ops-2",
+        capabilityId: "cap-ops",
+        status: "completed",
+      },
+    ],
+    failed: [
+      {
+        executionId: "exec-201",
+        agentId: "agent-sentinel",
+        missionId: "mission-alpha5-recovery",
+        taskId: "task-recovery-1",
+        capabilityId: "cap-recovery",
+        status: "failed",
+        error: "Connector timeout after 3 retries.",
+      },
+    ],
+  },
+};
+
+export const mockToolCentre: ToolCentreData = {
+  counts: { total: 5, registered: 5 },
+  invocationCounts: { total: 6, pending: 0, running: 2, completed: 3, failed: 1 },
+  permissionBreakdown: { safe: 3, restricted: 1, privileged: 1 },
+  tools: [
+    {
+      toolId: "tool-search",
+      name: "Knowledge Search",
+      description: "Search knowledge assets across workspaces.",
+      capabilityId: "cap-search",
+      agentId: "agent-hermes",
+      permissionLevel: "safe",
+      status: "registered",
+    },
+    {
+      toolId: "tool-planner",
+      name: "Mission Planner",
+      description: "Prepare mission plans from operator input.",
+      capabilityId: "cap-ops",
+      agentId: "agent-claw",
+      permissionLevel: "restricted",
+      status: "registered",
+    },
+    {
+      toolId: "tool-connector",
+      name: "Connector Sweep",
+      description: "Sweep external connectors for recovery signals.",
+      capabilityId: "cap-recovery",
+      agentId: "agent-sentinel",
+      permissionLevel: "privileged",
+      status: "registered",
+    },
+    {
+      toolId: "tool-reporter",
+      name: "Executive Reporter",
+      description: "Compile governance and outcome summaries.",
+      capabilityId: "cap-ops",
+      agentId: "agent-claw",
+      permissionLevel: "safe",
+      status: "registered",
+    },
+    {
+      toolId: "tool-monitor",
+      name: "Telemetry Monitor",
+      description: "Observe runtime telemetry across kernel surfaces.",
+      capabilityId: "cap-monitoring",
+      agentId: "agent-athena",
+      permissionLevel: "safe",
+      status: "registered",
+    },
+  ],
+  invocations: {
+    active: [
+      {
+        invocationId: "invoke-204",
+        toolId: "tool-search",
+        capabilityId: "cap-search",
+        agentId: "agent-hermes",
+        permissionLevel: "safe",
+        status: "running",
+      },
+    ],
+    completed: [
+      {
+        invocationId: "invoke-203",
+        toolId: "tool-planner",
+        capabilityId: "cap-ops",
+        agentId: "agent-claw",
+        permissionLevel: "restricted",
+        status: "completed",
+      },
+    ],
+    failed: [
+      {
+        invocationId: "invoke-201",
+        toolId: "tool-connector",
+        capabilityId: "cap-recovery",
+        agentId: "agent-sentinel",
+        permissionLevel: "privileged",
+        status: "failed",
+        error: "Execution disabled in in-memory foundation.",
+      },
+    ],
+  },
+};
+
+export const mockConversationCentre: ConversationCentreData = {
+  counts: { conversations: 3, threads: 3, messages: 3, knowledgeLinks: 2 },
+  contextAvailability: { available: true, conversationCountWithContext: 1, contextRecordCount: 1 },
+  conversations: [
+    {
+      conversationId: "conv-alpha5",
+      workspaceId: "ws-local",
+      missionId: "mission-alpha5-ui",
+      participantIds: ["jarvis", "agent-hermes"],
+    },
+    {
+      conversationId: "conv-governance",
+      projectId: "proj-governance",
+      participantIds: ["jarvis", "agent-claw"],
+    },
+    {
+      conversationId: "conv-recovery",
+      missionId: "mission-alpha5-recovery",
+      participantIds: ["agent-sentinel"],
+    },
+  ],
+  threads: [
+    { threadId: "thread-alpha5-plan", conversationId: "conv-alpha5", participantIds: ["jarvis", "agent-hermes"] },
+    { threadId: "thread-gov-review", conversationId: "conv-governance", participantIds: ["jarvis", "agent-claw"] },
+    { threadId: "thread-recovery", conversationId: "conv-recovery", participantIds: ["agent-sentinel"] },
+  ],
+  messages: [
+    {
+      messageId: "msg-1",
+      conversationId: "conv-alpha5",
+      threadId: "thread-alpha5-plan",
+      participantId: "jarvis",
+      role: "assistant",
+      content: "New operator note added to Alpha-5 planning thread.",
+    },
+    {
+      messageId: "msg-2",
+      conversationId: "conv-governance",
+      threadId: "thread-gov-review",
+      participantId: "jarvis",
+      role: "assistant",
+      content: "Mission scope context attached to governance review thread.",
+    },
+    {
+      messageId: "msg-3",
+      conversationId: "conv-recovery",
+      threadId: "thread-recovery",
+      participantId: "agent-sentinel",
+      role: "assistant",
+      content: "Message linked to launch runbook asset.",
+    },
+  ],
+  knowledgeLinks: [
+    { conversationId: "conv-alpha5", threadId: "thread-alpha5-plan", knowledgeAssetId: "asset-launch-runbook" },
+    { conversationId: "conv-recovery", messageId: "msg-3", knowledgeAssetId: "asset-launch-runbook" },
+  ],
+  contexts: [
+    {
+      contextId: "ctx-1",
+      conversationId: "conv-governance",
+      threadId: "thread-gov-review",
+      content: "Mission scope context attached to governance review thread.",
+    },
+  ],
 };
 
 export const pageMap: Record<NavPage, PageData> = {

@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { loadConsoleData, type ConsoleDataResult } from "./api/commandcoreApi";
 import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
-import { mockMissionCentre, pageMap, type NavPage } from "./data/mockKernel";
+import {
+  mockAgentCentre,
+  mockConversationCentre,
+  mockMissionCentre,
+  mockToolCentre,
+  pageMap,
+  type NavPage,
+} from "./data/mockKernel";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
@@ -17,6 +24,9 @@ import { WorkspacesDashboard } from "./pages/WorkspacesDashboard";
 const initialData: ConsoleDataResult = {
   pages: pageMap,
   missionCentre: mockMissionCentre,
+  agentCentre: mockAgentCentre,
+  toolCentre: mockToolCentre,
+  conversationCentre: mockConversationCentre,
   source: "mock",
   error: "Loading console data...",
 };
@@ -60,11 +70,11 @@ export default function App() {
       case "missions":
         return <MissionDashboard {...props} missionCentre={consoleData.missionCentre} />;
       case "agents":
-        return <AgentDashboard {...props} />;
+        return <AgentDashboard {...props} agentCentre={consoleData.agentCentre} />;
       case "tools":
-        return <ToolDashboard {...props} />;
+        return <ToolDashboard {...props} toolCentre={consoleData.toolCentre} />;
       case "conversations":
-        return <ConversationDashboard {...props} />;
+        return <ConversationDashboard {...props} conversationCentre={consoleData.conversationCentre} />;
       case "knowledge":
         return <KnowledgeDashboard {...props} />;
       case "workspaces":
@@ -76,7 +86,17 @@ export default function App() {
       default:
         return <ExecutiveHome {...props} pages={consoleData.pages} />;
     }
-  }, [activePage, consoleData.missionCentre, consoleData.pages, consoleData.source, currentPage, sourceMessage]);
+  }, [
+    activePage,
+    consoleData.agentCentre,
+    consoleData.conversationCentre,
+    consoleData.missionCentre,
+    consoleData.pages,
+    consoleData.source,
+    consoleData.toolCentre,
+    currentPage,
+    sourceMessage,
+  ]);
 
   return (
     <div className="app-frame">

@@ -76,3 +76,9 @@ def test_tool_dashboard_service_summarises_registry_and_runtime_state():
         event["event_name"] == "ToolInvocationFailed"
         for event in dashboard["recent_tool_activity"]
     )
+
+    tool_records = {item["tool_id"]: item for item in dashboard["tools"]}
+    assert set(tool_records) == {"tool-safe", "tool-restricted"}
+    assert tool_records["tool-safe"]["permission_level"] == "safe"
+    assert tool_records["tool-safe"]["name"] == "Knowledge Search"
+    assert tool_records["tool-restricted"]["permission_level"] == "restricted"

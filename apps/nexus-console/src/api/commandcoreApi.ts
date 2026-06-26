@@ -1,9 +1,21 @@
 import {
+  mockAgentCentre,
+  mockConversationCentre,
   mockKernel,
   mockMissionCentre,
+  mockToolCentre,
   pageMap,
   type ActivityItem,
+  type AgentAssignmentRecord,
+  type AgentCentreData,
+  type AgentProfile,
   type AvailabilityItem,
+  type ConversationCentreData,
+  type ConversationContextRecord,
+  type ConversationKnowledgeLinkRecord,
+  type ConversationMessageRecord,
+  type ConversationRecord,
+  type ConversationThreadRecord,
   type MissionAgentExecution,
   type MissionCentreData,
   type MissionRecord,
@@ -11,6 +23,9 @@ import {
   type PageData,
   type StatusTone,
   type TableRow,
+  type ToolCentreData,
+  type ToolInvocationRecord,
+  type ToolRecord,
 } from "../data/mockKernel";
 
 export type DataSource = "live" | "mock";
@@ -18,6 +33,9 @@ export type DataSource = "live" | "mock";
 export type ConsoleDataResult = {
   pages: Record<NavPage, PageData>;
   missionCentre: MissionCentreData;
+  agentCentre: AgentCentreData;
+  toolCentre: ToolCentreData;
+  conversationCentre: ConversationCentreData;
   source: DataSource;
   baseUrl?: string;
   error?: string;
@@ -34,6 +52,9 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
     return {
       pages: pageMap,
       missionCentre: mockMissionCentre,
+      agentCentre: mockAgentCentre,
+      toolCentre: mockToolCentre,
+      conversationCentre: mockConversationCentre,
       source: "mock",
       error: "VITE_COMMANDCORE_API_URL is not configured.",
     };
@@ -68,6 +89,9 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
         settings: pageMap.settings,
       },
       missionCentre: buildMissionCentre(missions),
+      agentCentre: buildAgentCentre(agents),
+      toolCentre: buildToolCentre(tools),
+      conversationCentre: buildConversationCentre(conversations),
       source: "live",
       baseUrl: apiBaseUrl,
     };
@@ -75,6 +99,9 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
     return {
       pages: pageMap,
       missionCentre: mockMissionCentre,
+      agentCentre: mockAgentCentre,
+      toolCentre: mockToolCentre,
+      conversationCentre: mockConversationCentre,
       source: "mock",
       baseUrl: apiBaseUrl,
       error: error instanceof Error ? error.message : "Unable to load CommandCore API.",
@@ -278,6 +305,64 @@ function executionRecordsOf(items: unknown[]): MissionAgentExecution[] {
   });
 }
 
+function buildAgentCentre(data: JsonObject): AgentCentreData {
+  const counts = objectOf(data.agent_counts);
+  const assignmentCounts = objectOf(data.assignment_counts);
+
+  return {
+    counts: {
+      total: numberOf(counts.total),
+      available: numberOf(counts.available),
+      busy: numberOf(counts.busy),
+      offline: numberOf(counts.offline),
+    },
+    assignmentCounts: {
+      total: numberOf(assignmentCounts.total),
+      assigned: numberOf(assignmentCounts.assigned),
+      running: numberOf(assignmentCounts.running),
+      completed: numberOf(assignmentCounts.completed),
+      failed: numberOf(assignmentCounts.failed),
+    },
+    profiles: agentProfilesOf(arrayOf(data.agents)),
+    assignments: assignmentRecordsOf(arrayOf(data.assignments)),
+    executions: {
+      active: executionRecordsOf(arrayOf(data.active_executions)),
+      completed: executionRecordsOf(arrayOf(data.completed_executions)),
+      failed: executionRecordsOf(arrayOf(data.failed_executions)),
+    },
+  };
+}
+
+function agentProfilesOf(items: unknown[]): AgentProfile[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      agentId: stringOf(object.agent_id, `agent-${index}`),
+      name: stringOf(object.name, stringOf(object.agent_id, `agent-${index}`)),
+      role: stringOf(object.role, "unassigned"),
+      runtimeStatus: stringOf(object.runtime_status, "unknown"),
+      capabilityIds: arrayOf(object.capability_ids).map((value) => stringOf(value, "")),
+      missionQueue: arrayOf(object.mission_queue).map((value) => stringOf(value, "")),
+      stateSummary: typeof object.state_summary === "string" ? object.state_summary : undefined,
+    };
+  });
+}
+
+function assignmentRecordsOf(items: unknown[]): AgentAssignmentRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      assignmentId: stringOf(object.assignment_id, `assignment-${index}`),
+      agentId: stringOf(object.agent_id, "unknown-agent"),
+      missionId: typeof object.mission_id === "string" ? object.mission_id : undefined,
+      taskId: typeof object.task_id === "string" ? object.task_id : undefined,
+      capabilityId: typeof object.capability_id === "string" ? object.capability_id : undefined,
+      status: stringOf(object.status, "unknown"),
+      error: typeof object.error === "string" ? object.error : undefined,
+    };
+  });
+}
+
 function buildAgentDashboard(data: JsonObject): PageData {
   const agentCounts = objectOf(data.agent_counts);
   const assignmentCounts = objectOf(data.assignment_counts);
@@ -312,6 +397,154 @@ function buildAgentDashboard(data: JsonObject): PageData {
     ),
     activity: activitiesOf(arrayOf(data.recent_agent_activity), "No recent agent activity available."),
   };
+}
+
+function buildToolCentre(data: JsonObject): ToolCentreData {
+  const counts = objectOf(data.tool_counts);
+  const invocationCounts = objectOf(data.invocation_counts);
+  const permissionBreakdown = objectOf(data.tools_by_permission);
+
+  return {
+    counts: {
+      total: numberOf(counts.total),
+      registered: numberOf(counts.registered),
+    },
+    invocationCounts: {
+      total: numberOf(invocationCounts.total),
+      pending: numberOf(invocationCounts.pending),
+      running: numberOf(invocationCounts.running),
+      completed: numberOf(invocationCounts.completed),
+      failed: numberOf(invocationCounts.failed),
+    },
+    permissionBreakdown: Object.fromEntries(
+      Object.entries(permissionBreakdown).map(([key, value]) => [key, numberOf(value)]),
+    ),
+    tools: toolRecordsOf(arrayOf(data.tools)),
+    invocations: {
+      active: toolInvocationRecordsOf(arrayOf(data.active_invocations)),
+      completed: toolInvocationRecordsOf(arrayOf(data.completed_invocations)),
+      failed: toolInvocationRecordsOf(arrayOf(data.failed_invocations)),
+    },
+  };
+}
+
+function toolRecordsOf(items: unknown[]): ToolRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      toolId: stringOf(object.tool_id, "tool-" + index),
+      name: stringOf(object.name, "Unnamed tool"),
+      description: stringOf(object.description, ""),
+      capabilityId: typeof object.capability_id === "string" ? object.capability_id : undefined,
+      agentId: typeof object.agent_id === "string" ? object.agent_id : undefined,
+      permissionLevel: stringOf(object.permission_level, "safe"),
+      status: stringOf(object.status, "unknown"),
+    };
+  });
+}
+
+function toolInvocationRecordsOf(items: unknown[]): ToolInvocationRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      invocationId: stringOf(object.invocation_id, "invocation-" + index),
+      toolId: stringOf(object.tool_id, "unknown-tool"),
+      capabilityId: typeof object.capability_id === "string" ? object.capability_id : undefined,
+      agentId: typeof object.agent_id === "string" ? object.agent_id : undefined,
+      permissionLevel: stringOf(object.permission_level, "safe"),
+      status: stringOf(object.status, "unknown"),
+      error: typeof object.error === "string" ? object.error : undefined,
+    };
+  });
+}
+
+function buildConversationCentre(data: JsonObject): ConversationCentreData {
+  const context = objectOf(data.context_availability);
+
+  return {
+    counts: {
+      conversations: numberOf(objectOf(data.conversation_counts).total),
+      threads: numberOf(objectOf(data.thread_counts).total),
+      messages: numberOf(objectOf(data.message_counts).total),
+      knowledgeLinks: numberOf(data.knowledge_link_count),
+    },
+    contextAvailability: {
+      available: booleanOf(context.available),
+      conversationCountWithContext: numberOf(context.conversation_count_with_context),
+      contextRecordCount: numberOf(context.context_record_count),
+    },
+    conversations: conversationRecordsOf(arrayOf(data.conversations)),
+    threads: threadRecordsOf(arrayOf(data.threads)),
+    messages: messageRecordsOf(arrayOf(data.messages)),
+    knowledgeLinks: knowledgeLinkRecordsOf(arrayOf(data.knowledge_links)),
+    contexts: contextRecordsOf(arrayOf(data.contexts)),
+  };
+}
+
+function conversationRecordsOf(items: unknown[]): ConversationRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      conversationId: stringOf(object.conversation_id, "conversation-" + index),
+      workspaceId: typeof object.workspace_id === "string" ? object.workspace_id : undefined,
+      companyId: typeof object.company_id === "string" ? object.company_id : undefined,
+      projectId: typeof object.project_id === "string" ? object.project_id : undefined,
+      objectiveId: typeof object.objective_id === "string" ? object.objective_id : undefined,
+      missionId: typeof object.mission_id === "string" ? object.mission_id : undefined,
+      participantIds: arrayOf(object.participant_ids).map((value) => stringOf(value, "")),
+    };
+  });
+}
+
+function threadRecordsOf(items: unknown[]): ConversationThreadRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      threadId: stringOf(object.thread_id, "thread-" + index),
+      conversationId: stringOf(object.conversation_id, "unknown-conversation"),
+      participantIds: arrayOf(object.participant_ids).map((value) => stringOf(value, "")),
+    };
+  });
+}
+
+function messageRecordsOf(items: unknown[]): ConversationMessageRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      messageId: stringOf(object.message_id, "message-" + index),
+      conversationId: stringOf(object.conversation_id, "unknown-conversation"),
+      threadId: typeof object.thread_id === "string" ? object.thread_id : undefined,
+      participantId: stringOf(object.participant_id, "unknown-participant"),
+      role: stringOf(object.role, "assistant"),
+      content: stringOf(object.content, ""),
+    };
+  });
+}
+
+function knowledgeLinkRecordsOf(items: unknown[]): ConversationKnowledgeLinkRecord[] {
+  return items.map((item) => {
+    const object = objectOf(item);
+    return {
+      conversationId: stringOf(object.conversation_id, "unknown-conversation"),
+      threadId: typeof object.thread_id === "string" ? object.thread_id : undefined,
+      messageId: typeof object.message_id === "string" ? object.message_id : undefined,
+      knowledgeAssetId: stringOf(object.knowledge_asset_id, "unknown-asset"),
+    };
+  });
+}
+
+function contextRecordsOf(items: unknown[]): ConversationContextRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      contextId: stringOf(object.context_id, "context-" + index),
+      conversationId: stringOf(object.conversation_id, "unknown-conversation"),
+      threadId: typeof object.thread_id === "string" ? object.thread_id : undefined,
+      missionId: typeof object.mission_id === "string" ? object.mission_id : undefined,
+      projectId: typeof object.project_id === "string" ? object.project_id : undefined,
+      content: stringOf(object.content, ""),
+    };
+  });
 }
 
 function buildToolDashboard(data: JsonObject): PageData {

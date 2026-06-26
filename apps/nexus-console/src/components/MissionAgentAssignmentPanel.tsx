@@ -1,11 +1,23 @@
-import type { MissionCentreData, StatusTone } from "../data/mockKernel";
+import type { MissionAgentExecution, StatusTone } from "../data/mockKernel";
 import { StatusBadge } from "./StatusBadge";
 
-type MissionAgentAssignmentPanelProps = {
-  executions: MissionCentreData["executions"];
+type ExecutionGroups = {
+  active: MissionAgentExecution[];
+  completed: MissionAgentExecution[];
+  failed: MissionAgentExecution[];
 };
 
-export function MissionAgentAssignmentPanel({ executions }: MissionAgentAssignmentPanelProps) {
+type MissionAgentAssignmentPanelProps = {
+  executions: ExecutionGroups;
+  title?: string;
+  emptyMessage?: string;
+};
+
+export function MissionAgentAssignmentPanel({
+  executions,
+  title = "Agent Assignment Panel",
+  emptyMessage = "Agent execution telemetry will appear here once missions are assigned to runtime agents.",
+}: MissionAgentAssignmentPanelProps) {
   const rows = [
     ...executions.active.map((item) => ({ ...item, tone: "active" as StatusTone })),
     ...executions.completed.map((item) => ({ ...item, tone: "complete" as StatusTone })),
@@ -16,7 +28,7 @@ export function MissionAgentAssignmentPanel({ executions }: MissionAgentAssignme
     <section className="panel surface mission-assignment-panel">
       <div className="panel-header">
         <div className="panel-title-stack">
-          <h3>Agent Assignment Panel</h3>
+          <h3>{title}</h3>
           <span>{rows.length ? `${rows.length} execution records` : "No assignment activity yet"}</span>
         </div>
       </div>
@@ -43,7 +55,7 @@ export function MissionAgentAssignmentPanel({ executions }: MissionAgentAssignme
       ) : (
         <div className="empty-state">
           <strong>No Agent Assignments Yet</strong>
-          <p>Agent execution telemetry will appear here once missions are assigned to runtime agents.</p>
+          <p>{emptyMessage}</p>
         </div>
       )}
     </section>

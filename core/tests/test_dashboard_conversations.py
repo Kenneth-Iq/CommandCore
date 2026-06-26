@@ -109,8 +109,30 @@ def test_conversation_dashboard_service_reports_counts_knowledge_and_context_act
     assert any(event["event_name"] == "ConversationKnowledgeLinked" for event in recent_activity)
     assert any(event["event_name"] == "ConversationMessageAdded" for event in recent_message_activity)
 
+    conversation_records = {item["conversation_id"]: item for item in dashboard.conversations()}
+    assert set(conversation_records) == {"conv-1", "conv-2"}
+    assert conversation_records["conv-1"]["workspace_id"] == "ws-local"
+
+    thread_records = {item["thread_id"]: item for item in dashboard.threads()}
+    assert set(thread_records) == {"thread-1", "thread-2", "thread-3"}
+
+    message_records = {item["message_id"]: item for item in dashboard.messages()}
+    assert set(message_records) == {"msg-1", "msg-2", "msg-3"}
+    assert message_records["msg-1"]["content"] == "Prepare the release summary."
+
+    knowledge_link_records = dashboard.knowledge_links()
+    assert {item["knowledge_asset_id"] for item in knowledge_link_records} == {"know-1"}
+
+    context_records = dashboard.contexts()
+    assert {item["context_id"] for item in context_records} == {"ctx-1"}
+
     built = dashboard.build_dashboard()
     assert built["conversation_counts"] == counts
     assert built["thread_counts"] == thread_counts
     assert built["message_counts"] == message_counts
     assert built["knowledge_link_count"] == 2
+    assert len(built["conversations"]) == 2
+    assert len(built["threads"]) == 3
+    assert len(built["messages"]) == 3
+    assert len(built["knowledge_links"]) == 2
+    assert len(built["contexts"]) == 1
