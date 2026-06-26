@@ -58,7 +58,12 @@ def test_commandcore_api_routes_return_200_and_expected_fields():
     assert "tool_counts" in tools.json()
     assert "conversation_counts" in conversations.json()
     assert "workspace_counts" in workspaces.json()
+    assert "workspaces" in workspaces.json()
+    assert "companies" in workspaces.json()
+    assert "projects" in workspaces.json()
+    assert "capabilities" in workspaces.json()
     assert "knowledge_counts" in knowledge.json()
+    assert "knowledge_assets" in knowledge.json()
 
 
 def test_commandcore_api_returns_useful_non_zero_seeded_dashboard_data():
@@ -69,6 +74,8 @@ def test_commandcore_api_returns_useful_non_zero_seeded_dashboard_data():
         agents = client.get("/dashboard/agents").json()
         tools = client.get("/dashboard/tools").json()
         conversations = client.get("/dashboard/conversations").json()
+        workspaces = client.get("/dashboard/workspaces").json()
+        knowledge = client.get("/dashboard/knowledge").json()
 
     assert kernel["health_snapshot"]["event_count"] > 0
     assert kernel["audit_summary"]["entry_count"] > 0
@@ -81,6 +88,11 @@ def test_commandcore_api_returns_useful_non_zero_seeded_dashboard_data():
     assert conversations["conversation_counts"]["total"] >= 2
     assert conversations["message_counts"]["total"] >= 4
     assert conversations["knowledge_link_count"] >= 2
+    assert len(workspaces["workspaces"]) >= 1
+    assert len(workspaces["companies"]) >= 1
+    assert len(workspaces["projects"]) >= 1
+    assert len(workspaces["capabilities"]) >= 1
+    assert len(knowledge["knowledge_assets"]) >= 1
 
 
 def test_commandcore_api_is_read_only_for_defined_routes():

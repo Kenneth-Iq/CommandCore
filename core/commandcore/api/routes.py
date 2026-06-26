@@ -93,6 +93,9 @@ def build_router(kernel: CommandCoreKernel) -> APIRouter:
                 workspace_registry=kernel.workspace_registry,
                 knowledge_engine=kernel.knowledge_engine,
                 audit_trail=kernel.audit_trail,
+                company_registry=kernel.company_registry,
+                project_registry=kernel.project_registry,
+                capability_registry=kernel.capability_registry,
             ).build_dashboard()
         )
 
@@ -102,6 +105,9 @@ def build_router(kernel: CommandCoreKernel) -> APIRouter:
             workspace_registry=kernel.workspace_registry,
             knowledge_engine=kernel.knowledge_engine,
             audit_trail=kernel.audit_trail,
+            company_registry=kernel.company_registry,
+            project_registry=kernel.project_registry,
+            capability_registry=kernel.capability_registry,
         ).build_dashboard()
         kernel_overview = KernelOverviewDashboardService(kernel)
         payload = {
@@ -109,6 +115,11 @@ def build_router(kernel: CommandCoreKernel) -> APIRouter:
             "workspace_counts": workspace_dashboard["workspace_counts"],
             "knowledge_asset_counts": workspace_dashboard["knowledge_asset_counts"],
             "knowledge_relationship_counts": workspace_dashboard["knowledge_relationship_counts"],
+            "knowledge_assets": workspace_dashboard["knowledge_assets"],
+            "workspaces": workspace_dashboard["workspaces"],
+            "companies": workspace_dashboard["companies"],
+            "projects": workspace_dashboard["projects"],
+            "capabilities": workspace_dashboard["capabilities"],
             "recent_workspace_activity": workspace_dashboard["recent_workspace_activity"],
         }
         return jsonable_encoder(payload)
