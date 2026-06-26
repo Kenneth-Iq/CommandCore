@@ -2284,3 +2284,233 @@ button {
 .executive-alerts-panel {
   padding: 1.1rem 1.2rem;
 }
+
+.context-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.1rem;
+  font-size: 0.86rem;
+}
+
+.context-breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.context-breadcrumb-separator {
+  color: #5c7196;
+}
+
+.context-breadcrumb-link {
+  color: #8bd0ff;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.context-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.context-breadcrumb-current {
+  color: #edf3ff;
+}
+
+.world-summary-band {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.world-summary-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(129, 170, 221, 0.1);
+  background: rgba(6, 13, 25, 0.42);
+}
+
+.world-summary-chip strong {
+  font-size: 1.2rem;
+}
+
+.world-summary-chip span {
+  color: #8ca6cc;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.world-tree-root,
+.world-tree-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.world-tree-children {
+  animation: world-tree-expand 160ms ease-out;
+}
+
+@keyframes world-tree-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.world-tree-node {
+  margin: 0;
+}
+
+.world-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.4rem;
+  border-radius: 0.6rem;
+  transition: background 120ms ease;
+}
+
+.world-tree-row:hover {
+  background: rgba(77, 184, 255, 0.06);
+}
+
+.world-tree-row.is-selected {
+  background: rgba(77, 184, 255, 0.14);
+  border: 1px solid rgba(77, 184, 255, 0.32);
+}
+
+.world-tree-caret,
+.world-tree-caret-spacer {
+  width: 1.1rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.world-tree-caret {
+  background: none;
+  border: none;
+  color: #8ca6cc;
+  cursor: pointer;
+  transition: transform 120ms ease;
+  font-size: 0.78rem;
+}
+
+.world-tree-caret.is-open {
+  transform: rotate(90deg);
+}
+
+.world-node-tag {
+  flex-shrink: 0;
+  padding: 0.18rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(141, 162, 193, 0.14);
+  color: #8ca6cc;
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.world-node-tag-portfolio {
+  background: rgba(132, 92, 255, 0.16);
+  color: #d0c1ff;
+}
+
+.world-node-tag-company {
+  background: rgba(39, 186, 120, 0.14);
+  color: #94f7c5;
+}
+
+.world-node-tag-workspace {
+  background: rgba(77, 184, 255, 0.14);
+  color: #8bd0ff;
+}
+
+.world-node-tag-project {
+  background: rgba(255, 160, 66, 0.14);
+  color: #ffc979;
+}
+
+.world-tree-label {
+  background: none;
+  border: none;
+  color: #dbe7fb;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+}
+
+.world-tree-label:hover {
+  color: #8bd0ff;
+}
+
+.relationship-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.relationship-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.relationship-group-label {
+  color: #8ca6cc;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.relationship-group-empty {
+  color: #5c7196;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1280px) {
+  .world-summary-band {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .relationship-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .world-summary-band {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .world-summary-band {
+    grid-template-columns: 1fr;
+  }
+
+  .relationship-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .world-tree-row {
+    flex-wrap: wrap;
+  }
+}

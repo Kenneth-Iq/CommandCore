@@ -6,6 +6,7 @@ import { FilterEmptyState } from "../components/FilterEmptyState";
 import { KnowledgeCentre } from "../components/KnowledgeCentre";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
+import { RelationshipCard } from "../components/RelationshipCard";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
@@ -13,12 +14,14 @@ import type { NavPage, PageData } from "../data/mockKernel";
 import type { KnowledgeAssetRecord, KnowledgeCentreData } from "../data/nexusCentres";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
+import { buildRelationshipCard, type WorldData } from "../worldModel";
 
 type KnowledgeDashboardProps = {
   page: PageData;
   source: DataSource;
   sourceMessage?: string;
   knowledgeCentre: KnowledgeCentreData;
+  world: WorldData;
   selection: RouteSelection;
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
@@ -39,13 +42,14 @@ const emptyFilters: KnowledgeFilterState = {
   missionId: "",
 };
 
-export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentre, selection, onNavigate }: KnowledgeDashboardProps) {
+export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentre, world, selection, onNavigate }: KnowledgeDashboardProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<KnowledgeFilterState>(emptyFilters);
 
   const selectedAsset = selection.assetId
     ? knowledgeCentre.assets.find((asset) => asset.assetId === selection.assetId)
     : undefined;
+  const relationshipData = selection.assetId ? buildRelationshipCard("knowledge", selection.assetId, world) : undefined;
 
   const scopesOf = (kind: string) => uniqueOptions(
     knowledgeCentre.assets.flatMap((asset) => asset.scopes.filter((scope) => scope.kind === kind).map((scope) => scope.value)),
@@ -133,6 +137,8 @@ export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentr
           <p>No knowledge asset matched `assetId={selection.assetId}` in the current live or seeded data.</p>
         </div>
       ) : null}
+
+      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
 
       <FilterBar
         searchValue={search}

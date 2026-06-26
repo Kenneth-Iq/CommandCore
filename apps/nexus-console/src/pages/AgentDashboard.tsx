@@ -11,6 +11,7 @@ import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmentPanel";
 import { PageHeader } from "../components/PageHeader";
+import { RelationshipCard } from "../components/RelationshipCard";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
@@ -18,10 +19,12 @@ import type { DataSource } from "../api/commandcoreApi";
 import { agentRuntimeTone, type AgentCentreData, type AgentProfile, type NavPage, type PageData } from "../data/mockKernel";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
+import { buildRelationshipCard, type WorldData } from "../worldModel";
 
 type AgentDashboardProps = {
   page: PageData;
   agentCentre: AgentCentreData;
+  world: WorldData;
   selection: RouteSelection;
   source: DataSource;
   sourceMessage?: string;
@@ -38,7 +41,7 @@ const emptyFilters: AgentFilterState = {
   capabilityId: "",
 };
 
-export function AgentDashboard({ page, agentCentre, selection, source, sourceMessage, onNavigate }: AgentDashboardProps) {
+export function AgentDashboard({ page, agentCentre, world, selection, source, sourceMessage, onNavigate }: AgentDashboardProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<AgentFilterState>(emptyFilters);
 
@@ -49,6 +52,7 @@ export function AgentDashboard({ page, agentCentre, selection, source, sourceMes
   const selectedAssignment = selectedAgent
     ? agentCentre.assignments.find((assignment) => assignment.agentId === selectedAgent.agentId)
     : undefined;
+  const relationshipData = selection.agentId ? buildRelationshipCard("agent", selection.agentId, world) : undefined;
 
   const statusOptions = useMemo(() => uniqueOptions(agentCentre.profiles.map((agent) => agent.runtimeStatus)), [agentCentre.profiles]);
   const capabilityOptions = useMemo(() => uniqueOptions(agentCentre.profiles.flatMap((agent) => agent.capabilityIds)), [agentCentre.profiles]);
@@ -118,6 +122,8 @@ export function AgentDashboard({ page, agentCentre, selection, source, sourceMes
           <p>No agent matched `agentId={selection.agentId}` in the current live or seeded data.</p>
         </div>
       ) : null}
+
+      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
 
       <section className="operations-layout">
         <AgentStatusGrid page={page} />

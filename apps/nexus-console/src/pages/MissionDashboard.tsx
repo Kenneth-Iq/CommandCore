@@ -10,6 +10,7 @@ import { MissionSectionList } from "../components/MissionSectionList";
 import { MissionStatusBreakdown } from "../components/MissionStatusBreakdown";
 import { MissionTimeline } from "../components/MissionTimeline";
 import { PageHeader } from "../components/PageHeader";
+import { RelationshipCard } from "../components/RelationshipCard";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
@@ -18,12 +19,14 @@ import { missionStatusTone, type ConversationCentreData, type MissionCentreData,
 import type { KnowledgeCentreData } from "../data/nexusCentres";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
+import { buildRelationshipCard, type WorldData } from "../worldModel";
 
 type MissionDashboardProps = {
   page: PageData;
   missionCentre: MissionCentreData;
   conversationCentre: ConversationCentreData;
   knowledgeCentre: KnowledgeCentreData;
+  world: WorldData;
   selection: RouteSelection;
   source: DataSource;
   sourceMessage?: string;
@@ -49,6 +52,7 @@ export function MissionDashboard({
   missionCentre,
   conversationCentre,
   knowledgeCentre,
+  world,
   selection,
   source,
   sourceMessage,
@@ -70,6 +74,7 @@ export function MissionDashboard({
   const selectedAsset = selectedMission
     ? knowledgeCentre.assets.find((asset) => asset.scopes.some((scope) => scope.kind === "mission" && scope.value === selectedMission.missionId))
     : undefined;
+  const relationshipData = selection.missionId ? buildRelationshipCard("mission", selection.missionId, world) : undefined;
 
   const agentOptions = useMemo(() => uniqueOptions(missions.map((mission) => mission.assignedAgentId)), [missions]);
   const capabilityOptions = useMemo(() => uniqueOptions(missions.flatMap((mission) => mission.capabilityIds)), [missions]);
@@ -149,6 +154,8 @@ export function MissionDashboard({
           <p>No mission matched `missionId={selection.missionId}` in the current live or seeded data.</p>
         </div>
       ) : null}
+
+      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
 
       <MissionStatusBreakdown
         counts={missionCentre.counts}

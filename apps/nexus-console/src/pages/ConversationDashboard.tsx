@@ -11,6 +11,7 @@ import { JarvisIntegrationPlaceholder } from "../components/JarvisIntegrationPla
 import { MessagePreviewPanel } from "../components/MessagePreviewPanel";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
+import { RelationshipCard } from "../components/RelationshipCard";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
@@ -18,10 +19,12 @@ import type { DataSource } from "../api/commandcoreApi";
 import type { ConversationCentreData, ConversationRecord, NavPage, PageData } from "../data/mockKernel";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
+import { buildRelationshipCard, type WorldData } from "../worldModel";
 
 type ConversationDashboardProps = {
   page: PageData;
   conversationCentre: ConversationCentreData;
+  world: WorldData;
   selection: RouteSelection;
   source: DataSource;
   sourceMessage?: string;
@@ -42,7 +45,7 @@ const emptyFilters: ConversationFilterState = {
   missionId: "",
 };
 
-export function ConversationDashboard({ page, conversationCentre, selection, source, sourceMessage, onNavigate }: ConversationDashboardProps) {
+export function ConversationDashboard({ page, conversationCentre, world, selection, source, sourceMessage, onNavigate }: ConversationDashboardProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<ConversationFilterState>(emptyFilters);
 
@@ -55,6 +58,7 @@ export function ConversationDashboard({ page, conversationCentre, selection, sou
   const selectedKnowledgeLink = selectedConversation
     ? conversationCentre.knowledgeLinks.find((link) => link.conversationId === selectedConversation.conversationId)
     : undefined;
+  const relationshipData = selection.conversationId ? buildRelationshipCard("conversation", selection.conversationId, world) : undefined;
 
   const workspaceOptions = useMemo(() => uniqueOptions(conversationCentre.conversations.map((conversation) => conversation.workspaceId)), [conversationCentre.conversations]);
   const companyOptions = useMemo(() => uniqueOptions(conversationCentre.conversations.map((conversation) => conversation.companyId)), [conversationCentre.conversations]);
@@ -130,6 +134,8 @@ export function ConversationDashboard({ page, conversationCentre, selection, sou
           <p>No conversation matched `conversationId={selection.conversationId}` in the current live or seeded data.</p>
         </div>
       ) : null}
+
+      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
 
       <section className="operations-layout">
         <ConversationInspector page={page} />

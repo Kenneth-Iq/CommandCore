@@ -6,6 +6,7 @@ import { HermesClawPreparationPanel } from "../components/HermesClawPreparationP
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
+import { RelationshipCard } from "../components/RelationshipCard";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
@@ -18,10 +19,12 @@ import type { DataSource } from "../api/commandcoreApi";
 import { toolPermissionTone, type NavPage, type PageData, type ToolCentreData, type ToolRecord } from "../data/mockKernel";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
+import { buildRelationshipCard, type WorldData } from "../worldModel";
 
 type ToolDashboardProps = {
   page: PageData;
   toolCentre: ToolCentreData;
+  world: WorldData;
   selection: RouteSelection;
   source: DataSource;
   sourceMessage?: string;
@@ -40,7 +43,7 @@ const emptyFilters: ToolFilterState = {
   capabilityId: "",
 };
 
-export function ToolDashboard({ page, toolCentre, selection, source, sourceMessage, onNavigate }: ToolDashboardProps) {
+export function ToolDashboard({ page, toolCentre, world, selection, source, sourceMessage, onNavigate }: ToolDashboardProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<ToolFilterState>(emptyFilters);
 
@@ -54,6 +57,7 @@ export function ToolDashboard({ page, toolCentre, selection, source, sourceMessa
         ...toolCentre.invocations.failed,
       ].find((invocation) => invocation.toolId === selectedTool.toolId)
     : undefined;
+  const relationshipData = selection.toolId ? buildRelationshipCard("tool", selection.toolId, world) : undefined;
 
   const permissionOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.permissionLevel)), [toolCentre.tools]);
   const agentOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.agentId)), [toolCentre.tools]);
@@ -119,6 +123,8 @@ export function ToolDashboard({ page, toolCentre, selection, source, sourceMessa
           <p>No tool matched `toolId={selection.toolId}` in the current live or seeded data.</p>
         </div>
       ) : null}
+
+      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
 
       <section className="operations-layout">
         <ToolMonitor page={page} />

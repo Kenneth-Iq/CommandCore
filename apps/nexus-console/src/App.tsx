@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadConsoleData, type ConsoleDataResult } from "./api/commandcoreApi";
 import { CommandBar } from "./components/CommandBar";
+import { ContextBreadcrumb } from "./components/ContextBreadcrumb";
 import { Sidebar } from "./components/Sidebar";
 import {
   mockAgentCentre,
@@ -32,6 +33,7 @@ import {
   type NexusRoute,
   type RouteSelection,
 } from "./routing";
+import { buildBreadcrumb, type WorldData } from "./worldModel";
 
 const initialData: ConsoleDataResult = {
   pages: pageMap,
@@ -78,6 +80,20 @@ export default function App() {
 
   const searchEntries = useMemo(() => buildSearchEntries(consoleData), [consoleData]);
 
+  const world: WorldData = useMemo(
+    () => ({
+      portfolioExplorer: consoleData.portfolioExplorer,
+      missionCentre: consoleData.missionCentre,
+      agentCentre: consoleData.agentCentre,
+      toolCentre: consoleData.toolCentre,
+      conversationCentre: consoleData.conversationCentre,
+      knowledgeCentre: consoleData.knowledgeCentre,
+    }),
+    [consoleData],
+  );
+
+  const breadcrumbSegments = useMemo(() => buildBreadcrumb(route.selection, world), [route.selection, world]);
+
   function handleNavigate(page: NavPage, selection: RouteSelection = {}) {
     navigateTo(page, selection);
   }
@@ -113,6 +129,7 @@ export default function App() {
             missionCentre={consoleData.missionCentre}
             conversationCentre={consoleData.conversationCentre}
             knowledgeCentre={consoleData.knowledgeCentre}
+            world={world}
             selection={route.selection}
             onNavigate={handleNavigate}
           />
@@ -122,6 +139,7 @@ export default function App() {
           <AgentDashboard
             {...props}
             agentCentre={consoleData.agentCentre}
+            world={world}
             selection={route.selection}
             onNavigate={handleNavigate}
           />
@@ -131,6 +149,7 @@ export default function App() {
           <ToolDashboard
             {...props}
             toolCentre={consoleData.toolCentre}
+            world={world}
             selection={route.selection}
             onNavigate={handleNavigate}
           />
@@ -140,6 +159,7 @@ export default function App() {
           <ConversationDashboard
             {...props}
             conversationCentre={consoleData.conversationCentre}
+            world={world}
             selection={route.selection}
             onNavigate={handleNavigate}
           />
@@ -149,6 +169,7 @@ export default function App() {
           <KnowledgeDashboard
             {...props}
             knowledgeCentre={consoleData.knowledgeCentre}
+            world={world}
             selection={route.selection}
             onNavigate={handleNavigate}
           />
@@ -159,6 +180,7 @@ export default function App() {
             {...props}
             portfolioExplorer={consoleData.portfolioExplorer}
             knowledgeCentre={consoleData.knowledgeCentre}
+            world={world}
             selection={route.selection}
             onNavigate={handleNavigate}
           />
@@ -188,6 +210,7 @@ export default function App() {
     currentPage,
     route.selection,
     sourceMessage,
+    world,
   ]);
 
   return (
@@ -199,6 +222,7 @@ export default function App() {
           onNavigate={handleNavigate}
           searchEntries={searchEntries}
         />
+        <ContextBreadcrumb segments={breadcrumbSegments} onNavigate={handleNavigate} />
         {renderedPage}
       </main>
     </div>

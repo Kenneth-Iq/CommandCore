@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DependencyGraph } from "../components/DependencyGraph";
 import { ExecutiveAlerts, severityFromTone } from "../components/ExecutiveAlerts";
 import { ExecutiveFocusPanel, emptyFocusState, type ExecutiveFocusState } from "../components/ExecutiveFocusPanel";
 import { ExecutiveHealthBoard } from "../components/ExecutiveHealthBoard";
+import { EnterpriseExplorer } from "../components/EnterpriseExplorer";
 import { MetricCard } from "../components/MetricCard";
 import { OperationalTimeline } from "../components/OperationalTimeline";
 import { PageHeader } from "../components/PageHeader";
@@ -25,6 +26,7 @@ import type {
   StatusTone,
 } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeAssetRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
+import { buildWorldSummary, buildWorldTree, type WorldData } from "../worldModel";
 
 type ExecutiveHomeProps = {
   page: PageData;
@@ -70,6 +72,30 @@ export function ExecutiveHome({
   onNavigate,
 }: ExecutiveHomeProps) {
   const [focus, setFocus] = useState<ExecutiveFocusState>(emptyFocusState());
+  const [expandedWorldNodes, setExpandedWorldNodes] = useState<Set<string>>(() => loadExpandedWorldNodes());
+
+  useEffect(() => {
+    saveExpandedWorldNodes(expandedWorldNodes);
+  }, [expandedWorldNodes]);
+
+  const world: WorldData = useMemo(
+    () => ({ portfolioExplorer, missionCentre, agentCentre, toolCentre, conversationCentre, knowledgeCentre }),
+    [portfolioExplorer, missionCentre, agentCentre, toolCentre, conversationCentre, knowledgeCentre],
+  );
+  const worldTree = useMemo(() => buildWorldTree(world), [world]);
+  const worldSummary = useMemo(() => buildWorldSummary(world), [world]);
+
+  function toggleWorldNode(id: string) {
+    setExpandedWorldNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
   const allMissions = useMemo(() => [...missionCentre.active, ...missionCentre.completed, ...missionCentre.failed], [missionCentre]);
 
   const filtered = useMemo<ExecutiveScopeModel>(() => {
@@ -125,6 +151,17 @@ export function ExecutiveHome({
         label="Operating Picture"
         title={source === "live" ? "Live executive operational intelligence view" : "Seeded executive operational intelligence view"}
         status={page.status}
+      />
+
+      <EnterpriseExplorer
+        tree={worldTree}
+        summary={worldSummary}
+        healthStatus={pages.health.status}
+        readinessStatus={pages.kernel.status}
+        selection={{}}
+        expanded={expandedWorldNodes}
+        onToggle={toggleWorldNode}
+        onNavigate={onNavigate}
       />
 
       <ExecutiveFocusPanel
@@ -615,4 +652,33 @@ function toneFromScore(score: number): StatusTone {
     return "warning";
   }
   return "blocked";
+}
+
+const WORLD_EXPANDED_NODES_STORAGE_KEY = "nexus.worldExplorer.expandedNodes";
+
+function loadExpandedWorldNodes(): Set<string> {
+  if (typeof window === "undefined") {
+    return new Set(["portfolio-root"]);
+  }
+  try {
+    const raw = window.localStorage.getItem(WORLD_EXPANDED_NODES_STORAGE_KEY);
+    if (!raw) {
+      return new Set(["portfolio-root"]);
+    }
+    const parsed = JSON.parse(raw) as string[];
+    return new Set(parsed.length ? parsed : ["portfolio-root"]);
+  } catch {
+    return new Set(["portfolio-root"]);
+  }
+}
+
+function saveExpandedWorldNodes(nodes: Set<string>): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(WORLD_EXPANDED_NODES_STORAGE_KEY, JSON.stringify(Array.from(nodes)));
+  } catch {
+    // Local storage is unavailable; expanded state simply will not persist across reloads.
+  }
 }

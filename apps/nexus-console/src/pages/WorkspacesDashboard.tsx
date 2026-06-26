@@ -5,6 +5,7 @@ import { FilterBar } from "../components/FilterBar";
 import { FilterEmptyState } from "../components/FilterEmptyState";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
+import { RelationshipCard } from "../components/RelationshipCard";
 import { PortfolioExplorer } from "../components/PortfolioExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
@@ -13,6 +14,7 @@ import type { NavPage, PageData } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
+import { buildRelationshipCard, type WorldData } from "../worldModel";
 
 type WorkspacesDashboardProps = {
   page: PageData;
@@ -20,6 +22,7 @@ type WorkspacesDashboardProps = {
   sourceMessage?: string;
   portfolioExplorer: PortfolioExplorerData;
   knowledgeCentre: KnowledgeCentreData;
+  world: WorldData;
   selection: RouteSelection;
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
@@ -36,7 +39,7 @@ const emptyFilters: PortfolioFilterState = {
   capabilityId: "",
 };
 
-export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExplorer, knowledgeCentre, selection, onNavigate }: WorkspacesDashboardProps) {
+export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExplorer, knowledgeCentre, world, selection, onNavigate }: WorkspacesDashboardProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<PortfolioFilterState>(emptyFilters);
 
@@ -51,6 +54,13 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
     : undefined;
   const hasSelection = Boolean(selection.workspaceId || selection.companyId || selection.projectId);
   const selectionKey = selection.workspaceId ? `workspaceId=${selection.workspaceId}` : selection.companyId ? `companyId=${selection.companyId}` : selection.projectId ? `projectId=${selection.projectId}` : undefined;
+  const relationshipData = selection.workspaceId
+    ? buildRelationshipCard("workspace", selection.workspaceId, world)
+    : selection.companyId
+      ? buildRelationshipCard("company", selection.companyId, world)
+      : selection.projectId
+        ? buildRelationshipCard("project", selection.projectId, world)
+        : undefined;
 
   const statusOptions = useMemo(() => uniqueOptions([
     ...portfolioExplorer.workspaces.map((workspace) => workspace.status),
@@ -200,6 +210,8 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
           <p>No portfolio record matched `{selectionKey}` in the current live or seeded data.</p>
         </div>
       ) : null}
+
+      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
 
       <FilterBar
         searchValue={search}
