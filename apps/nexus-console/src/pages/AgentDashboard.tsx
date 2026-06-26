@@ -1,9 +1,12 @@
+import { useMemo, useState } from "react";
 import { AgentAssignmentHistoryPanel } from "../components/AgentAssignmentHistoryPanel";
 import { AgentCapabilityPanel } from "../components/AgentCapabilityPanel";
 import { AgentProfilePanel } from "../components/AgentProfilePanel";
 import { AgentStatusGrid } from "../components/AgentStatusGrid";
 import { AgentStatusSections } from "../components/AgentStatusSections";
 import { EventFeed } from "../components/EventFeed";
+import { FilterBar } from "../components/FilterBar";
+import { FilterEmptyState } from "../components/FilterEmptyState";
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmentPanel";
@@ -12,7 +15,8 @@ import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
-import { agentRuntimeTone, type AgentCentreData, type NavPage, type PageData } from "../data/mockKernel";
+import { agentRuntimeTone, type AgentCentreData, type AgentProfile, type NavPage, type PageData } from "../data/mockKernel";
+import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
 
 type AgentDashboardProps = {
@@ -24,17 +28,59 @@ type AgentDashboardProps = {
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
+type AgentFilterState = {
+  runtimeStatus: string;
+  capabilityId: string;
+};
+
+const emptyFilters: AgentFilterState = {
+  runtimeStatus: "",
+  capabilityId: "",
+};
+
 export function AgentDashboard({ page, agentCentre, selection, source, sourceMessage, onNavigate }: AgentDashboardProps) {
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<AgentFilterState>(emptyFilters);
+
   const failedAgentIds = new Set(agentCentre.executions.failed.map((execution) => execution.agentId));
-  const activeAgents = agentCentre.profiles.filter((agent) => agent.runtimeStatus === "busy");
-  const idleAgents = agentCentre.profiles.filter((agent) => agent.runtimeStatus === "available");
-  const failedAgents = agentCentre.profiles.filter((agent) => failedAgentIds.has(agent.agentId));
   const selectedAgent = selection.agentId
     ? agentCentre.profiles.find((agent) => agent.agentId === selection.agentId)
     : undefined;
   const selectedAssignment = selectedAgent
     ? agentCentre.assignments.find((assignment) => assignment.agentId === selectedAgent.agentId)
     : undefined;
+
+  const statusOptions = useMemo(() => uniqueOptions(agentCentre.profiles.map((agent) => agent.runtimeStatus)), [agentCentre.profiles]);
+  const capabilityOptions = useMemo(() => uniqueOptions(agentCentre.profiles.flatMap((agent) => agent.capabilityIds)), [agentCentre.profiles]);
+
+  function matchesFilters(agent: AgentProfile): boolean {
+    if (!textMatches([agent.name, agent.agentId, agent.role], search)) {
+      return false;
+    }
+    if (filters.runtimeStatus && agent.runtimeStatus !== filters.runtimeStatus) {
+      return false;
+    }
+    if (filters.capabilityId && !agent.capabilityIds.includes(filters.capabilityId)) {
+      return false;
+    }
+    return true;
+  }
+
+  const visibleProfiles = pinSelected(
+    agentCentre.profiles.filter(matchesFilters),
+    selectedAgent,
+    (agent) => agent.agentId,
+  );
+  const hasNoFilterMatches = agentCentre.profiles.length > 0 && visibleProfiles.length === 0;
+
+  const activeAgents = visibleProfiles.filter((agent) => agent.runtimeStatus === "busy");
+  const idleAgents = visibleProfiles.filter((agent) => agent.runtimeStatus === "available");
+  const failedAgents = visibleProfiles.filter((agent) => failedAgentIds.has(agent.agentId));
+
+  function clearFilters() {
+    setSearch("");
+    setFilters(emptyFilters);
+  }
 
   return (
     <div className="page-shell">
@@ -79,9 +125,27 @@ export function AgentDashboard({ page, agentCentre, selection, source, sourceMes
         <InfoPanel title={page.secondaryPanel.title} rows={page.secondaryPanel.rows} />
       </section>
 
-      <AgentStatusSections active={activeAgents} idle={idleAgents} failed={failedAgents} />
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search agents by name, ID, or role"
+        fields={[
+          { id: "runtimeStatus", label: "Status", value: filters.runtimeStatus, options: statusOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, runtimeStatus: value })) },
+          { id: "capabilityId", label: "Capability", value: filters.capabilityId, options: capabilityOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, capabilityId: value })) },
+        ]}
+        visibleCount={visibleProfiles.length}
+        totalCount={agentCentre.profiles.length}
+        onClear={clearFilters}
+      />
 
-      <AgentProfilePanel profiles={agentCentre.profiles} selectedAgentId={selection.agentId} onNavigate={onNavigate} />
+      {hasNoFilterMatches ? (
+        <FilterEmptyState message="No agents match the current filters." onClear={clearFilters} />
+      ) : (
+        <>
+          <AgentStatusSections active={activeAgents} idle={idleAgents} failed={failedAgents} />
+          <AgentProfilePanel profiles={visibleProfiles} selectedAgentId={selection.agentId} onNavigate={onNavigate} />
+        </>
+      )}
 
       <section className="mission-support-grid">
         <AgentAssignmentHistoryPanel assignments={agentCentre.assignments} />

@@ -72,7 +72,7 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
           <strong>Jarvis Command Routing</strong>
           <StatusBadge tone="warning">Routing Mode / AI Disabled</StatusBadge>
         </div>
-        <span>Local search across the live or seeded operating picture. Routing stays deterministic and read-only.</span>
+        <span>Jump anywhere across the operating picture. Once you are on a page, use its local filters to narrow what is shown without leaving it.</span>
       </div>
       <div className="command-bar-shortcut">Ctrl K</div>
 

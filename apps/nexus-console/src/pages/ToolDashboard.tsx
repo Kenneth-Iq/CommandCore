@@ -1,4 +1,7 @@
+import { useMemo, useState } from "react";
 import { EventFeed } from "../components/EventFeed";
+import { FilterBar } from "../components/FilterBar";
+import { FilterEmptyState } from "../components/FilterEmptyState";
 import { HermesClawPreparationPanel } from "../components/HermesClawPreparationPanel";
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
@@ -12,7 +15,8 @@ import { ToolMonitor } from "../components/ToolMonitor";
 import { ToolPermissionBreakdown } from "../components/ToolPermissionBreakdown";
 import { ToolRegistryPanel } from "../components/ToolRegistryPanel";
 import type { DataSource } from "../api/commandcoreApi";
-import { toolPermissionTone, type NavPage, type PageData, type ToolCentreData } from "../data/mockKernel";
+import { toolPermissionTone, type NavPage, type PageData, type ToolCentreData, type ToolRecord } from "../data/mockKernel";
+import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
 
 type ToolDashboardProps = {
@@ -24,7 +28,22 @@ type ToolDashboardProps = {
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
+type ToolFilterState = {
+  permissionLevel: string;
+  agentId: string;
+  capabilityId: string;
+};
+
+const emptyFilters: ToolFilterState = {
+  permissionLevel: "",
+  agentId: "",
+  capabilityId: "",
+};
+
 export function ToolDashboard({ page, toolCentre, selection, source, sourceMessage, onNavigate }: ToolDashboardProps) {
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<ToolFilterState>(emptyFilters);
+
   const selectedTool = selection.toolId
     ? toolCentre.tools.find((tool) => tool.toolId === selection.toolId)
     : undefined;
@@ -35,6 +54,34 @@ export function ToolDashboard({ page, toolCentre, selection, source, sourceMessa
         ...toolCentre.invocations.failed,
       ].find((invocation) => invocation.toolId === selectedTool.toolId)
     : undefined;
+
+  const permissionOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.permissionLevel)), [toolCentre.tools]);
+  const agentOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.agentId)), [toolCentre.tools]);
+  const capabilityOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.capabilityId)), [toolCentre.tools]);
+
+  function matchesFilters(tool: ToolRecord): boolean {
+    if (!textMatches([tool.name, tool.toolId, tool.description], search)) {
+      return false;
+    }
+    if (filters.permissionLevel && tool.permissionLevel !== filters.permissionLevel) {
+      return false;
+    }
+    if (filters.agentId && tool.agentId !== filters.agentId) {
+      return false;
+    }
+    if (filters.capabilityId && tool.capabilityId !== filters.capabilityId) {
+      return false;
+    }
+    return true;
+  }
+
+  const visibleTools = pinSelected(toolCentre.tools.filter(matchesFilters), selectedTool, (tool) => tool.toolId);
+  const hasNoFilterMatches = toolCentre.tools.length > 0 && visibleTools.length === 0;
+
+  function clearFilters() {
+    setSearch("");
+    setFilters(emptyFilters);
+  }
 
   return (
     <div className="page-shell">
@@ -91,8 +138,26 @@ export function ToolDashboard({ page, toolCentre, selection, source, sourceMessa
         failed={toolCentre.invocations.failed}
       />
 
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search tools by name, ID, or description"
+        fields={[
+          { id: "permissionLevel", label: "Permission", value: filters.permissionLevel, options: permissionOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, permissionLevel: value })) },
+          { id: "agentId", label: "Agent", value: filters.agentId, options: agentOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, agentId: value })) },
+          { id: "capabilityId", label: "Capability", value: filters.capabilityId, options: capabilityOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, capabilityId: value })) },
+        ]}
+        visibleCount={visibleTools.length}
+        totalCount={toolCentre.tools.length}
+        onClear={clearFilters}
+      />
+
       <section className="mission-support-grid">
-        <ToolRegistryPanel tools={toolCentre.tools} selectedToolId={selection.toolId} onNavigate={onNavigate} />
+        {hasNoFilterMatches ? (
+          <FilterEmptyState message="No tools match the current filters." onClear={clearFilters} />
+        ) : (
+          <ToolRegistryPanel tools={visibleTools} selectedToolId={selection.toolId} onNavigate={onNavigate} />
+        )}
         <ToolInvocationHistoryPanel invocations={toolCentre.invocations} />
       </section>
 

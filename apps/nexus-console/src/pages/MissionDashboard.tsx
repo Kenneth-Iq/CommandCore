@@ -1,4 +1,7 @@
+import { useMemo, useState } from "react";
 import { EventFeed } from "../components/EventFeed";
+import { FilterBar } from "../components/FilterBar";
+import { FilterEmptyState } from "../components/FilterEmptyState";
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmentPanel";
@@ -11,8 +14,9 @@ import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
-import { missionStatusTone, type ConversationCentreData, type MissionCentreData, type NavPage, type PageData } from "../data/mockKernel";
+import { missionStatusTone, type ConversationCentreData, type MissionCentreData, type MissionRecord, type NavPage, type PageData } from "../data/mockKernel";
 import type { KnowledgeCentreData } from "../data/nexusCentres";
+import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
 
 type MissionDashboardProps = {
@@ -26,6 +30,20 @@ type MissionDashboardProps = {
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
+type MissionFilterState = {
+  agentId: string;
+  capabilityId: string;
+  workspaceId: string;
+  projectId: string;
+};
+
+const emptyFilters: MissionFilterState = {
+  agentId: "",
+  capabilityId: "",
+  workspaceId: "",
+  projectId: "",
+};
+
 export function MissionDashboard({
   page,
   missionCentre,
@@ -36,7 +54,13 @@ export function MissionDashboard({
   sourceMessage,
   onNavigate,
 }: MissionDashboardProps) {
-  const missions = [...missionCentre.active, ...missionCentre.completed, ...missionCentre.failed];
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<MissionFilterState>(emptyFilters);
+
+  const missions = useMemo(
+    () => [...missionCentre.active, ...missionCentre.completed, ...missionCentre.failed],
+    [missionCentre],
+  );
   const selectedMission = selection.missionId
     ? missions.find((mission) => mission.missionId === selection.missionId)
     : undefined;
@@ -46,6 +70,47 @@ export function MissionDashboard({
   const selectedAsset = selectedMission
     ? knowledgeCentre.assets.find((asset) => asset.scopes.some((scope) => scope.kind === "mission" && scope.value === selectedMission.missionId))
     : undefined;
+
+  const agentOptions = useMemo(() => uniqueOptions(missions.map((mission) => mission.assignedAgentId)), [missions]);
+  const capabilityOptions = useMemo(() => uniqueOptions(missions.flatMap((mission) => mission.capabilityIds)), [missions]);
+  const workspaceOptions = useMemo(() => uniqueOptions(missions.flatMap((mission) => mission.scope.filter((entry) => entry.startsWith("workspace:")).map((entry) => entry.replace("workspace:", "")))), [missions]);
+  const projectOptions = useMemo(() => uniqueOptions(missions.flatMap((mission) => mission.scope.filter((entry) => entry.startsWith("project:")).map((entry) => entry.replace("project:", "")))), [missions]);
+
+  function matchesFilters(mission: MissionRecord): boolean {
+    if (!textMatches([mission.title, mission.missionId], search)) {
+      return false;
+    }
+    if (filters.agentId && mission.assignedAgentId !== filters.agentId) {
+      return false;
+    }
+    if (filters.capabilityId && !mission.capabilityIds.includes(filters.capabilityId)) {
+      return false;
+    }
+    if (filters.workspaceId && !mission.scope.includes(`workspace:${filters.workspaceId}`)) {
+      return false;
+    }
+    if (filters.projectId && !mission.scope.includes(`project:${filters.projectId}`)) {
+      return false;
+    }
+    return true;
+  }
+
+  function visibleBucket(bucket: MissionRecord[]): MissionRecord[] {
+    const filtered = bucket.filter(matchesFilters);
+    const belongsHere = selectedMission && bucket.some((mission) => mission.missionId === selectedMission.missionId);
+    return belongsHere ? pinSelected(filtered, selectedMission, (mission) => mission.missionId) : filtered;
+  }
+
+  const activeVisible = visibleBucket(missionCentre.active);
+  const completedVisible = visibleBucket(missionCentre.completed);
+  const failedVisible = visibleBucket(missionCentre.failed);
+  const visibleCount = activeVisible.length + completedVisible.length + failedVisible.length;
+  const hasNoFilterMatches = missions.length > 0 && visibleCount === 0;
+
+  function clearFilters() {
+    setSearch("");
+    setFilters(emptyFilters);
+  }
 
   return (
     <div className="page-shell">
@@ -97,38 +162,57 @@ export function MissionDashboard({
         <InfoPanel title={page.secondaryPanel.title} rows={page.secondaryPanel.rows} />
       </section>
 
-      <section className="mission-status-grid">
-        <MissionSectionList
-          title="Active Missions"
-          tone="active"
-          records={missionCentre.active}
-          conversationCentre={conversationCentre}
-          knowledgeCentre={knowledgeCentre}
-          selectedMissionId={selection.missionId}
-          onNavigate={onNavigate}
-          emptyMessage="No missions are currently active."
-        />
-        <MissionSectionList
-          title="Completed Missions"
-          tone="complete"
-          records={missionCentre.completed}
-          conversationCentre={conversationCentre}
-          knowledgeCentre={knowledgeCentre}
-          selectedMissionId={selection.missionId}
-          onNavigate={onNavigate}
-          emptyMessage="No missions have completed yet."
-        />
-        <MissionSectionList
-          title="Failed Missions"
-          tone="warning"
-          records={missionCentre.failed}
-          conversationCentre={conversationCentre}
-          knowledgeCentre={knowledgeCentre}
-          selectedMissionId={selection.missionId}
-          onNavigate={onNavigate}
-          emptyMessage="No mission failures recorded."
-        />
-      </section>
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search missions by title or ID"
+        fields={[
+          { id: "agentId", label: "Agent", value: filters.agentId, options: agentOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, agentId: value })) },
+          { id: "capabilityId", label: "Capability", value: filters.capabilityId, options: capabilityOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, capabilityId: value })) },
+          { id: "workspaceId", label: "Workspace", value: filters.workspaceId, options: workspaceOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, workspaceId: value })) },
+          { id: "projectId", label: "Project", value: filters.projectId, options: projectOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, projectId: value })) },
+        ]}
+        visibleCount={visibleCount}
+        totalCount={missions.length}
+        onClear={clearFilters}
+      />
+
+      {hasNoFilterMatches ? (
+        <FilterEmptyState message="No missions match the current filters." onClear={clearFilters} />
+      ) : (
+        <section className="mission-status-grid">
+          <MissionSectionList
+            title="Active Missions"
+            tone="active"
+            records={activeVisible}
+            conversationCentre={conversationCentre}
+            knowledgeCentre={knowledgeCentre}
+            selectedMissionId={selection.missionId}
+            onNavigate={onNavigate}
+            emptyMessage="No missions are currently active."
+          />
+          <MissionSectionList
+            title="Completed Missions"
+            tone="complete"
+            records={completedVisible}
+            conversationCentre={conversationCentre}
+            knowledgeCentre={knowledgeCentre}
+            selectedMissionId={selection.missionId}
+            onNavigate={onNavigate}
+            emptyMessage="No missions have completed yet."
+          />
+          <MissionSectionList
+            title="Failed Missions"
+            tone="warning"
+            records={failedVisible}
+            conversationCentre={conversationCentre}
+            knowledgeCentre={knowledgeCentre}
+            selectedMissionId={selection.missionId}
+            onNavigate={onNavigate}
+            emptyMessage="No mission failures recorded."
+          />
+        </section>
+      )}
 
       <section className="mission-support-grid">
         <MissionAgentAssignmentPanel executions={missionCentre.executions} />
