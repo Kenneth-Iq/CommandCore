@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadConsoleData, type ConsoleDataResult } from "./api/commandcoreApi";
 import { CommandBar } from "./components/CommandBar";
 import { ContextBreadcrumb } from "./components/ContextBreadcrumb";
+import { LoadingState } from "./components/LoadingState";
 import { Sidebar } from "./components/Sidebar";
 import {
   mockAgentCentre,
@@ -17,6 +18,7 @@ import {
   mockPortfolioExplorer,
   type SearchEntry,
 } from "./data/nexusCentres";
+import { useRecentlyViewed } from "./operatorPrefs";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
@@ -47,9 +49,24 @@ const initialData: ConsoleDataResult = {
   error: "Loading console data...",
 };
 
+const PAGE_SHORTCUTS: Record<string, NavPage> = {
+  h: "kernel",
+  m: "missions",
+  a: "agents",
+  t: "tools",
+  c: "conversations",
+  k: "knowledge",
+  w: "workspaces",
+  r: "health",
+  s: "settings",
+};
+
 export default function App() {
   const [route, setRoute] = useState<NexusRoute>(() => routeFromLocation(window.location));
   const [consoleData, setConsoleData] = useState<ConsoleDataResult>(initialData);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const pendingShortcutPrefix = useRef(false);
+  const { items: recentlyViewed, record: recordRecentlyViewed } = useRecentlyViewed();
 
   useEffect(() => {
     let active = true;
@@ -59,6 +76,7 @@ export default function App() {
         return;
       }
       setConsoleData(result);
+      setHasLoaded(true);
     });
 
     return () => {
@@ -98,6 +116,62 @@ export default function App() {
     navigateTo(page, selection);
   }
 
+  useEffect(() => {
+    const hasSelection = Object.values(route.selection).some(Boolean);
+    if (!hasSelection) {
+      return;
+    }
+    const matchingEntry = searchEntries.find((entry) =>
+      entry.page === route.page
+      && Object.entries(route.selection).every(([key, value]) => !value || (entry.selection as Record<string, string | undefined>)[key] === value),
+    );
+    const label = matchingEntry?.label ?? Object.values(route.selection).find(Boolean) ?? route.page;
+    recordRecentlyViewed({ label, page: route.page, selection: route.selection });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.page, route.selection]);
+
+  useEffect(() => {
+    function isTypingTarget(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      const tagName = target.tagName.toLowerCase();
+      return tagName === "input" || tagName === "textarea" || tagName === "select" || target.isContentEditable;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (event.key === "/" && !isTypingTarget(event.target)) {
+        event.preventDefault();
+        document.getElementById("command-bar-input")?.focus();
+        return;
+      }
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+      if (event.key.toLowerCase() === "g") {
+        pendingShortcutPrefix.current = true;
+        window.setTimeout(() => {
+          pendingShortcutPrefix.current = false;
+        }, 1200);
+        return;
+      }
+      if (pendingShortcutPrefix.current) {
+        pendingShortcutPrefix.current = false;
+        const targetPage = PAGE_SHORTCUTS[event.key.toLowerCase()];
+        if (targetPage) {
+          event.preventDefault();
+          handleNavigate(targetPage);
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const renderedPage = useMemo(() => {
     const props = {
       page: currentPage,
@@ -117,6 +191,7 @@ export default function App() {
             conversationCentre={consoleData.conversationCentre}
             knowledgeCentre={consoleData.knowledgeCentre}
             portfolioExplorer={consoleData.portfolioExplorer}
+            recentlyViewed={recentlyViewed}
             onNavigate={handleNavigate}
           />
         );
@@ -200,6 +275,7 @@ export default function App() {
             conversationCentre={consoleData.conversationCentre}
             knowledgeCentre={consoleData.knowledgeCentre}
             portfolioExplorer={consoleData.portfolioExplorer}
+            recentlyViewed={recentlyViewed}
             onNavigate={handleNavigate}
           />
         );
@@ -208,6 +284,7 @@ export default function App() {
     activePage,
     consoleData,
     currentPage,
+    recentlyViewed,
     route.selection,
     sourceMessage,
     world,
@@ -223,7 +300,7 @@ export default function App() {
           searchEntries={searchEntries}
         />
         <ContextBreadcrumb segments={breadcrumbSegments} onNavigate={handleNavigate} />
-        {renderedPage}
+        {hasLoaded ? renderedPage : <LoadingState label="Connecting To CommandCore" detail="Loading the current operating picture from the live API or seeded fallback..." />}
       </main>
     </div>
   );

@@ -6,7 +6,9 @@ import { HermesClawPreparationPanel } from "../components/HermesClawPreparationP
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
+import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
@@ -19,7 +21,7 @@ import type { DataSource } from "../api/commandcoreApi";
 import { toolPermissionTone, type NavPage, type PageData, type ToolCentreData, type ToolRecord } from "../data/mockKernel";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
-import { buildRelationshipCard, type WorldData } from "../worldModel";
+import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type ToolDashboardProps = {
   page: PageData;
@@ -124,7 +126,13 @@ export function ToolDashboard({ page, toolCentre, world, selection, source, sour
         </div>
       ) : null}
 
-      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
+      {relationshipData ? (
+        <>
+          <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
+          <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
+          <RelationshipExplorer centerLabel={selectedTool?.name ?? "Selected Tool"} data={relationshipData} onNavigate={onNavigate} />
+        </>
+      ) : null}
 
       <section className="operations-layout">
         <ToolMonitor page={page} />

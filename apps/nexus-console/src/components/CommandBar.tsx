@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import type { NavPage } from "../data/mockKernel";
 import { commandSuggestions, type SearchEntry } from "../data/nexusCentres";
 import type { RouteSelection } from "../routing";
@@ -12,6 +12,7 @@ type CommandBarProps = {
 
 export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBarProps) {
   const [query, setQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const visibleSuggestions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -39,9 +40,14 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
     }).slice(0, 8);
   }, [query, searchEntries]);
 
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [query]);
+
   function commitNavigation(page: NavPage, selection: RouteSelection = {}) {
     onNavigate(page, selection);
     setQuery("");
+    setHighlightedIndex(-1);
   }
 
   function routeFromQuery(nextQuery: string) {
@@ -64,6 +70,32 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
     }
   }
 
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setHighlightedIndex((previous) => Math.min(previous + 1, visibleResults.length - 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlightedIndex((previous) => Math.max(previous - 1, -1));
+      return;
+    }
+    if (event.key === "Enter") {
+      if (highlightedIndex >= 0 && visibleResults[highlightedIndex]) {
+        const entry = visibleResults[highlightedIndex];
+        commitNavigation(entry.page, entry.selection);
+        return;
+      }
+      routeFromQuery(query);
+      return;
+    }
+    if (event.key === "Escape") {
+      setQuery("");
+      setHighlightedIndex(-1);
+    }
+  }
+
   return (
     <section className="surface command-bar">
       <div className="command-bar-icon">J</div>
@@ -74,17 +106,14 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
         </div>
         <span>Jump anywhere across the operating picture. Once you are on a page, use its local filters to narrow what is shown without leaving it.</span>
       </div>
-      <div className="command-bar-shortcut">Ctrl K</div>
+      <div className="command-bar-shortcut">Press / or Ctrl K</div>
 
       <div className="command-input-shell">
         <input
+          id="command-bar-input"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              routeFromQuery(query);
-            }
-          }}
+          onKeyDown={handleInputKeyDown}
           className="command-input"
           placeholder="Search pages, missions, agents, tools, conversations, knowledge, workspaces"
           aria-label="Jarvis command routing"
@@ -114,16 +143,17 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
       <div className="command-results-panel">
         <div className="panel-title-stack">
           <h3>Local Search</h3>
-          <span>{visibleResults.length ? `${visibleResults.length} matched records` : "No routed matches"}</span>
+          <span>{visibleResults.length ? `${visibleResults.length} matched records (↑↓ to navigate, Enter to open)` : "No routed matches"}</span>
         </div>
         {visibleResults.length ? (
           <div className="command-results-list">
-            {visibleResults.map((entry) => (
+            {visibleResults.map((entry, index) => (
               <button
                 key={entry.id}
                 type="button"
-                className="command-result-row"
+                className={`command-result-row ${index === highlightedIndex ? "is-highlighted" : ""}`}
                 onClick={() => commitNavigation(entry.page, entry.selection)}
+                onMouseEnter={() => setHighlightedIndex(index)}
               >
                 <div>
                   <div className="knowledge-card-header">

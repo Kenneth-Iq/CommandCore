@@ -1,14 +1,18 @@
 import { agentRuntimeTone, type AgentProfile, type NavPage } from "../data/mockKernel";
 import type { RouteSelection } from "../routing";
+import { DependencyBadge } from "./DependencyBadge";
+import { FavouriteToggle } from "./FavouriteToggle";
 import { StatusBadge } from "./StatusBadge";
 
 type AgentProfilePanelProps = {
   profiles: AgentProfile[];
   selectedAgentId?: string;
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
+  isFavourite?: (agentId: string) => boolean;
+  onToggleFavourite?: (agentId: string) => void;
 };
 
-export function AgentProfilePanel({ profiles, selectedAgentId, onNavigate }: AgentProfilePanelProps) {
+export function AgentProfilePanel({ profiles, selectedAgentId, onNavigate, isFavourite, onToggleFavourite }: AgentProfilePanelProps) {
   return (
     <section className="panel surface agent-profile-panel">
       <div className="panel-header">
@@ -23,8 +27,20 @@ export function AgentProfilePanel({ profiles, selectedAgentId, onNavigate }: Age
           {profiles.map((agent) => (
             <article key={agent.agentId} className={`mission-card ${selectedAgentId === agent.agentId ? "is-selected" : ""}`}>
               <div className="mission-card-header">
-                <strong>{agent.name}</strong>
-                <StatusBadge tone={agentRuntimeTone(agent.runtimeStatus)}>{agent.runtimeStatus}</StatusBadge>
+                <span className="mission-card-header-lead">
+                  {onToggleFavourite ? (
+                    <FavouriteToggle
+                      active={isFavourite?.(agent.agentId) ?? false}
+                      onToggle={() => onToggleFavourite(agent.agentId)}
+                      label="favourite agent"
+                    />
+                  ) : null}
+                  <strong>{agent.name}</strong>
+                </span>
+                <span className="mission-card-header-badges">
+                  <DependencyBadge count={agent.capabilityIds.length} label="capability deps" />
+                  <StatusBadge tone={agentRuntimeTone(agent.runtimeStatus)}>{agent.runtimeStatus}</StatusBadge>
+                </span>
               </div>
               <p className="mission-card-id">{agent.role} / {agent.agentId}</p>
               <div className="mission-chip-row">

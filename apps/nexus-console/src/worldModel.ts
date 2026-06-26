@@ -306,6 +306,19 @@ export function buildBreadcrumb(selection: RouteSelection, world: WorldData): Br
   return segments;
 }
 
+export type ImpactAnalysis = {
+  dependents: RelationshipLink[];
+  dependencies: RelationshipLink[];
+  blastRadius: number;
+};
+
+export function buildImpactAnalysis(data: RelationshipCardData): ImpactAnalysis {
+  const dependents = [...data.children, ...data.relatedItems];
+  const dependencies = [...data.belongsTo, ...data.dependencies];
+  const blastRadius = dependents.length + dependencies.length + (data.parent ? 1 : 0);
+  return { dependents, dependencies, blastRadius };
+}
+
 export function buildRelationshipCard(kind: WorldEntityKind, id: string, world: WorldData): RelationshipCardData | undefined {
   const { portfolioExplorer, agentCentre, toolCentre, conversationCentre, knowledgeCentre } = world;
   const missions = allMissionsOf(world.missionCentre);

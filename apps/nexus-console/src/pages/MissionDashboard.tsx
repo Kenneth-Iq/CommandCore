@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { BulkActionsBar } from "../components/BulkActionsBar";
 import { EventFeed } from "../components/EventFeed";
 import { FilterBar } from "../components/FilterBar";
 import { FilterEmptyState } from "../components/FilterEmptyState";
+import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmentPanel";
@@ -10,16 +12,19 @@ import { MissionSectionList } from "../components/MissionSectionList";
 import { MissionStatusBreakdown } from "../components/MissionStatusBreakdown";
 import { MissionTimeline } from "../components/MissionTimeline";
 import { PageHeader } from "../components/PageHeader";
-import { RelationshipCard } from "../components/RelationshipCard";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
+import { RelationshipCard } from "../components/RelationshipCard";
+import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { SelectedContextBar } from "../components/SelectedContextBar";
+import { SortControl, type SortDirection } from "../components/SortControl";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import { missionStatusTone, type ConversationCentreData, type MissionCentreData, type MissionRecord, type NavPage, type PageData } from "../data/mockKernel";
 import type { KnowledgeCentreData } from "../data/nexusCentres";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
+import { useFavourites, useSavedFilters } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { buildRelationshipCard, type WorldData } from "../worldModel";
+import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type MissionDashboardProps = {
   page: PageData;
@@ -38,6 +43,12 @@ type MissionFilterState = {
   capabilityId: string;
   workspaceId: string;
   projectId: string;
+  favouritesOnly: boolean;
+};
+
+type MissionSavedFilters = {
+  search: string;
+  filters: MissionFilterState;
 };
 
 const emptyFilters: MissionFilterState = {
@@ -45,7 +56,14 @@ const emptyFilters: MissionFilterState = {
   capabilityId: "",
   workspaceId: "",
   projectId: "",
+  favouritesOnly: false,
 };
+
+const sortOptions = [
+  { value: "title", label: "Title" },
+  { value: "status", label: "Status" },
+  { value: "capabilityCount", label: "Capability Count" },
+];
 
 export function MissionDashboard({
   page,
@@ -60,6 +78,12 @@ export function MissionDashboard({
 }: MissionDashboardProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<MissionFilterState>(emptyFilters);
+  const [sortBy, setSortBy] = useState("title");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+
+  const { isFavourite, toggle: toggleFavourite } = useFavourites("mission");
+  const { savedFilters, save: saveFilters, clear: clearSavedFilters } = useSavedFilters<MissionSavedFilters>("missions", { search: "", filters: emptyFilters });
 
   const missions = useMemo(
     () => [...missionCentre.active, ...missionCentre.completed, ...missionCentre.failed],
@@ -97,11 +121,27 @@ export function MissionDashboard({
     if (filters.projectId && !mission.scope.includes(`project:${filters.projectId}`)) {
       return false;
     }
+    if (filters.favouritesOnly && !isFavourite(mission.missionId)) {
+      return false;
+    }
     return true;
   }
 
+  function sortMissions(list: MissionRecord[]): MissionRecord[] {
+    const sorted = [...list].sort((a, b) => {
+      if (sortBy === "status") {
+        return a.status.localeCompare(b.status);
+      }
+      if (sortBy === "capabilityCount") {
+        return a.capabilityIds.length - b.capabilityIds.length;
+      }
+      return a.title.localeCompare(b.title);
+    });
+    return sortDirection === "asc" ? sorted : sorted.reverse();
+  }
+
   function visibleBucket(bucket: MissionRecord[]): MissionRecord[] {
-    const filtered = bucket.filter(matchesFilters);
+    const filtered = sortMissions(bucket.filter(matchesFilters));
     const belongsHere = selectedMission && bucket.some((mission) => mission.missionId === selectedMission.missionId);
     return belongsHere ? pinSelected(filtered, selectedMission, (mission) => mission.missionId) : filtered;
   }
@@ -115,6 +155,36 @@ export function MissionDashboard({
   function clearFilters() {
     setSearch("");
     setFilters(emptyFilters);
+  }
+
+  function toggleBulkSelected(missionId: string) {
+    setBulkSelected((previous) => {
+      const next = new Set(previous);
+      if (next.has(missionId)) {
+        next.delete(missionId);
+      } else {
+        next.add(missionId);
+      }
+      return next;
+    });
+  }
+
+  function handleCopyIds() {
+    const ids = Array.from(bulkSelected).join(", ");
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(ids);
+    }
+  }
+
+  function handleExportJson() {
+    const selectedRecords = missions.filter((mission) => bulkSelected.has(mission.missionId));
+    const blob = new Blob([JSON.stringify(selectedRecords, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "nexus-mission-selection.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -155,7 +225,13 @@ export function MissionDashboard({
         </div>
       ) : null}
 
-      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
+      {relationshipData ? (
+        <>
+          <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
+          <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
+          <RelationshipExplorer centerLabel={selectedMission?.title ?? "Selected Mission"} data={relationshipData} onNavigate={onNavigate} />
+        </>
+      ) : null}
 
       <MissionStatusBreakdown
         counts={missionCentre.counts}
@@ -178,10 +254,49 @@ export function MissionDashboard({
           { id: "capabilityId", label: "Capability", value: filters.capabilityId, options: capabilityOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, capabilityId: value })) },
           { id: "workspaceId", label: "Workspace", value: filters.workspaceId, options: workspaceOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, workspaceId: value })) },
           { id: "projectId", label: "Project", value: filters.projectId, options: projectOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, projectId: value })) },
+          { id: "favouritesOnly", label: "Favourites", value: filters.favouritesOnly ? "yes" : "", options: [{ value: "yes", label: "Favourites Only" }], onChange: (value) => setFilters((prev) => ({ ...prev, favouritesOnly: value === "yes" })) },
         ]}
         visibleCount={visibleCount}
         totalCount={missions.length}
         onClear={clearFilters}
+      />
+
+      <div className="filter-toolbar-row">
+        <SortControl
+          options={sortOptions}
+          value={sortBy}
+          direction={sortDirection}
+          onChange={setSortBy}
+          onToggleDirection={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
+        />
+        <div className="route-chip-row">
+          <button type="button" className="route-chip" onClick={() => saveFilters({ search, filters })}>
+            Save Current Filters
+          </button>
+          <button
+            type="button"
+            className="route-chip"
+            disabled={!savedFilters}
+            onClick={() => {
+              if (savedFilters) {
+                setSearch(savedFilters.search);
+                setFilters(savedFilters.filters);
+              }
+            }}
+          >
+            Load Saved Filters
+          </button>
+          <button type="button" className="route-chip" disabled={!savedFilters} onClick={clearSavedFilters}>
+            Clear Saved Filters
+          </button>
+        </div>
+      </div>
+
+      <BulkActionsBar
+        selectedIds={Array.from(bulkSelected)}
+        onCopyIds={handleCopyIds}
+        onExportJson={handleExportJson}
+        onClear={() => setBulkSelected(new Set())}
       />
 
       {hasNoFilterMatches ? (
@@ -197,6 +312,10 @@ export function MissionDashboard({
             selectedMissionId={selection.missionId}
             onNavigate={onNavigate}
             emptyMessage="No missions are currently active."
+            isFavourite={isFavourite}
+            onToggleFavourite={toggleFavourite}
+            bulkSelectedIds={bulkSelected}
+            onToggleBulk={toggleBulkSelected}
           />
           <MissionSectionList
             title="Completed Missions"
@@ -207,6 +326,10 @@ export function MissionDashboard({
             selectedMissionId={selection.missionId}
             onNavigate={onNavigate}
             emptyMessage="No missions have completed yet."
+            isFavourite={isFavourite}
+            onToggleFavourite={toggleFavourite}
+            bulkSelectedIds={bulkSelected}
+            onToggleBulk={toggleBulkSelected}
           />
           <MissionSectionList
             title="Failed Missions"
@@ -217,6 +340,10 @@ export function MissionDashboard({
             selectedMissionId={selection.missionId}
             onNavigate={onNavigate}
             emptyMessage="No mission failures recorded."
+            isFavourite={isFavourite}
+            onToggleFavourite={toggleFavourite}
+            bulkSelectedIds={bulkSelected}
+            onToggleBulk={toggleBulkSelected}
           />
         </section>
       )}

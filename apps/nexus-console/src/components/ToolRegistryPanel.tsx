@@ -1,5 +1,6 @@
 import { toolPermissionTone, type NavPage, type ToolRecord } from "../data/mockKernel";
 import type { RouteSelection } from "../routing";
+import { DependencyBadge } from "./DependencyBadge";
 import { StatusBadge } from "./StatusBadge";
 
 type ToolRegistryPanelProps = {
@@ -24,7 +25,10 @@ export function ToolRegistryPanel({ tools, selectedToolId, onNavigate }: ToolReg
             <article key={tool.toolId} className={`mission-card ${selectedToolId === tool.toolId ? "is-selected" : ""}`}>
               <div className="mission-card-header">
                 <strong>{tool.name}</strong>
-                <StatusBadge tone={toolPermissionTone(tool.permissionLevel)}>{tool.permissionLevel}</StatusBadge>
+                <span className="mission-card-header-badges">
+                  <DependencyBadge count={tool.capabilityId ? 1 : 0} label="capability dep" />
+                  <StatusBadge tone={toolPermissionTone(tool.permissionLevel)}>{tool.permissionLevel}</StatusBadge>
+                </span>
               </div>
               <p className="mission-card-id">{tool.toolId}</p>
               <p className="agent-profile-summary">{tool.description}</p>

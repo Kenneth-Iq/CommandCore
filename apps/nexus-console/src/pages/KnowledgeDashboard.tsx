@@ -6,7 +6,9 @@ import { FilterEmptyState } from "../components/FilterEmptyState";
 import { KnowledgeCentre } from "../components/KnowledgeCentre";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
+import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
@@ -14,7 +16,7 @@ import type { NavPage, PageData } from "../data/mockKernel";
 import type { KnowledgeAssetRecord, KnowledgeCentreData } from "../data/nexusCentres";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
-import { buildRelationshipCard, type WorldData } from "../worldModel";
+import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type KnowledgeDashboardProps = {
   page: PageData;
@@ -138,7 +140,13 @@ export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentr
         </div>
       ) : null}
 
-      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
+      {relationshipData ? (
+        <>
+          <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
+          <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
+          <RelationshipExplorer centerLabel={selectedAsset?.title ?? "Selected Knowledge Asset"} data={relationshipData} onNavigate={onNavigate} />
+        </>
+      ) : null}
 
       <FilterBar
         searchValue={search}

@@ -5,7 +5,9 @@ import { FilterBar } from "../components/FilterBar";
 import { FilterEmptyState } from "../components/FilterEmptyState";
 import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
+import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { PortfolioExplorer } from "../components/PortfolioExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
@@ -14,7 +16,7 @@ import type { NavPage, PageData } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import type { RouteSelection } from "../routing";
-import { buildRelationshipCard, type WorldData } from "../worldModel";
+import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type WorkspacesDashboardProps = {
   page: PageData;
@@ -211,7 +213,17 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
         </div>
       ) : null}
 
-      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
+      {relationshipData ? (
+        <>
+          <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
+          <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
+          <RelationshipExplorer
+            centerLabel={selectedWorkspace?.name ?? selectedCompany?.name ?? selectedProject?.name ?? "Selected Portfolio Record"}
+            data={relationshipData}
+            onNavigate={onNavigate}
+          />
+        </>
+      ) : null}
 
       <FilterBar
         searchValue={search}

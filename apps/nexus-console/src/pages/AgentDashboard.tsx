@@ -11,15 +11,19 @@ import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmentPanel";
 import { PageHeader } from "../components/PageHeader";
+import { ImpactAnalysisCard } from "../components/ImpactAnalysisCard";
 import { RelationshipCard } from "../components/RelationshipCard";
+import { RelationshipExplorer } from "../components/RelationshipExplorer";
 import { RecordDetailPanel } from "../components/RecordDetailPanel";
 import { SelectedContextBar } from "../components/SelectedContextBar";
+import { SortControl, type SortDirection } from "../components/SortControl";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import { agentRuntimeTone, type AgentCentreData, type AgentProfile, type NavPage, type PageData } from "../data/mockKernel";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
+import { useFavourites } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { buildRelationshipCard, type WorldData } from "../worldModel";
+import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type AgentDashboardProps = {
   page: PageData;
@@ -34,16 +38,27 @@ type AgentDashboardProps = {
 type AgentFilterState = {
   runtimeStatus: string;
   capabilityId: string;
+  favouritesOnly: boolean;
 };
 
 const emptyFilters: AgentFilterState = {
   runtimeStatus: "",
   capabilityId: "",
+  favouritesOnly: false,
 };
+
+const sortOptions = [
+  { value: "name", label: "Name" },
+  { value: "runtimeStatus", label: "Status" },
+  { value: "capabilityCount", label: "Capability Count" },
+];
 
 export function AgentDashboard({ page, agentCentre, world, selection, source, sourceMessage, onNavigate }: AgentDashboardProps) {
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<AgentFilterState>(emptyFilters);
+  const [sortBy, setSortBy] = useState("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const { isFavourite, toggle: toggleFavourite } = useFavourites("agent");
 
   const failedAgentIds = new Set(agentCentre.executions.failed.map((execution) => execution.agentId));
   const selectedAgent = selection.agentId
@@ -67,11 +82,27 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
     if (filters.capabilityId && !agent.capabilityIds.includes(filters.capabilityId)) {
       return false;
     }
+    if (filters.favouritesOnly && !isFavourite(agent.agentId)) {
+      return false;
+    }
     return true;
   }
 
+  function sortAgents(list: AgentProfile[]): AgentProfile[] {
+    const sorted = [...list].sort((a, b) => {
+      if (sortBy === "runtimeStatus") {
+        return a.runtimeStatus.localeCompare(b.runtimeStatus);
+      }
+      if (sortBy === "capabilityCount") {
+        return a.capabilityIds.length - b.capabilityIds.length;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    return sortDirection === "asc" ? sorted : sorted.reverse();
+  }
+
   const visibleProfiles = pinSelected(
-    agentCentre.profiles.filter(matchesFilters),
+    sortAgents(agentCentre.profiles.filter(matchesFilters)),
     selectedAgent,
     (agent) => agent.agentId,
   );
@@ -123,7 +154,13 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
         </div>
       ) : null}
 
-      {relationshipData ? <RelationshipCard data={relationshipData} onNavigate={onNavigate} /> : null}
+      {relationshipData ? (
+        <>
+          <RelationshipCard data={relationshipData} onNavigate={onNavigate} />
+          <ImpactAnalysisCard analysis={buildImpactAnalysis(relationshipData)} onNavigate={onNavigate} />
+          <RelationshipExplorer centerLabel={selectedAgent?.name ?? "Selected Agent"} data={relationshipData} onNavigate={onNavigate} />
+        </>
+      ) : null}
 
       <section className="operations-layout">
         <AgentStatusGrid page={page} />
@@ -138,18 +175,35 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
         fields={[
           { id: "runtimeStatus", label: "Status", value: filters.runtimeStatus, options: statusOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, runtimeStatus: value })) },
           { id: "capabilityId", label: "Capability", value: filters.capabilityId, options: capabilityOptions.map((value) => ({ value, label: value })), onChange: (value) => setFilters((prev) => ({ ...prev, capabilityId: value })) },
+          { id: "favouritesOnly", label: "Favourites", value: filters.favouritesOnly ? "yes" : "", options: [{ value: "yes", label: "Favourites Only" }], onChange: (value) => setFilters((prev) => ({ ...prev, favouritesOnly: value === "yes" })) },
         ]}
         visibleCount={visibleProfiles.length}
         totalCount={agentCentre.profiles.length}
         onClear={clearFilters}
       />
 
+      <div className="filter-toolbar-row">
+        <SortControl
+          options={sortOptions}
+          value={sortBy}
+          direction={sortDirection}
+          onChange={setSortBy}
+          onToggleDirection={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
+        />
+      </div>
+
       {hasNoFilterMatches ? (
         <FilterEmptyState message="No agents match the current filters." onClear={clearFilters} />
       ) : (
         <>
           <AgentStatusSections active={activeAgents} idle={idleAgents} failed={failedAgents} />
-          <AgentProfilePanel profiles={visibleProfiles} selectedAgentId={selection.agentId} onNavigate={onNavigate} />
+          <AgentProfilePanel
+            profiles={visibleProfiles}
+            selectedAgentId={selection.agentId}
+            onNavigate={onNavigate}
+            isFavourite={isFavourite}
+            onToggleFavourite={toggleFavourite}
+          />
         </>
       )}
 

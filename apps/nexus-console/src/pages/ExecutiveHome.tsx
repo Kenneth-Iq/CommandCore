@@ -4,6 +4,8 @@ import { ExecutiveAlerts, severityFromTone } from "../components/ExecutiveAlerts
 import { ExecutiveFocusPanel, emptyFocusState, type ExecutiveFocusState } from "../components/ExecutiveFocusPanel";
 import { ExecutiveHealthBoard } from "../components/ExecutiveHealthBoard";
 import { EnterpriseExplorer } from "../components/EnterpriseExplorer";
+import { ExecutiveSimulationPanel } from "../components/ExecutiveSimulationPanel";
+import { RecentlyViewedPanel } from "../components/RecentlyViewedPanel";
 import { MetricCard } from "../components/MetricCard";
 import { OperationalTimeline } from "../components/OperationalTimeline";
 import { PageHeader } from "../components/PageHeader";
@@ -27,6 +29,8 @@ import type {
 } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeAssetRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
 import { buildWorldSummary, buildWorldTree, type WorldData } from "../worldModel";
+import { useExecutiveSimulation } from "../simulation";
+import type { RecentlyViewedEntry } from "../operatorPrefs";
 
 type ExecutiveHomeProps = {
   page: PageData;
@@ -37,6 +41,7 @@ type ExecutiveHomeProps = {
   conversationCentre: ConversationCentreData;
   knowledgeCentre: KnowledgeCentreData;
   portfolioExplorer: PortfolioExplorerData;
+  recentlyViewed: RecentlyViewedEntry[];
   source: DataSource;
   sourceMessage?: string;
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
@@ -67,6 +72,7 @@ export function ExecutiveHome({
   conversationCentre,
   knowledgeCentre,
   portfolioExplorer,
+  recentlyViewed,
   source,
   sourceMessage,
   onNavigate,
@@ -127,7 +133,19 @@ export function ExecutiveHome({
     };
   }, [allMissions, agentCentre.profiles, conversationCentre.conversations, focus, knowledgeCentre.assets, portfolioExplorer, toolCentre.tools]);
 
+  const simulation = useExecutiveSimulation(world);
   const healthMetrics = useMemo(() => buildHealthMetrics(pages, filtered), [pages, filtered]);
+  const healthMetricsWithSimulation = useMemo(
+    () => [
+      ...healthMetrics,
+      {
+        label: "Live Simulated Health",
+        score: simulation.healthScore,
+        detail: "Derived dynamically from simulated mission, agent, and tool activity.",
+      },
+    ],
+    [healthMetrics, simulation.healthScore],
+  );
   const kpiMetrics = useMemo(() => buildOperationalKpis(pages, filtered, conversationCentre, knowledgeCentre), [pages, filtered, conversationCentre, knowledgeCentre]);
   const activityItems = useMemo(() => buildExecutiveActivityFeed(pages, filtered), [pages, filtered]);
   const alerts = useMemo(() => activityItems.slice(0, 15).map((item) => ({ ...item, severity: severityFromTone(item.tone) })), [activityItems]);
@@ -164,6 +182,8 @@ export function ExecutiveHome({
         onNavigate={onNavigate}
       />
 
+      <RecentlyViewedPanel items={recentlyViewed} onNavigate={onNavigate} />
+
       <ExecutiveFocusPanel
         focus={focus}
         companyOptions={portfolioExplorer.companies.map((company) => ({ value: company.companyId, label: company.name }))}
@@ -174,7 +194,16 @@ export function ExecutiveHome({
         onChange={setFocus}
       />
 
-      <ExecutiveHealthBoard metrics={healthMetrics} />
+      <ExecutiveHealthBoard metrics={healthMetricsWithSimulation} />
+
+      <ExecutiveSimulationPanel
+        simulation={simulation}
+        missions={allMissions}
+        agents={agentCentre.profiles}
+        tools={toolCentre.tools}
+        conversations={conversationCentre.conversations}
+        knowledgeAssets={knowledgeCentre.assets}
+      />
 
       <section className="metrics-grid executive-summary-band executive-system-metrics">
         {kpiMetrics.map((metric) => (

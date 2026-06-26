@@ -2,6 +2,8 @@ import type { ConversationCentreData } from "../data/mockKernel";
 import { missionStatusTone, type MissionRecord, type NavPage, type StatusTone } from "../data/mockKernel";
 import type { KnowledgeCentreData } from "../data/nexusCentres";
 import type { RouteSelection } from "../routing";
+import { DependencyBadge } from "./DependencyBadge";
+import { FavouriteToggle } from "./FavouriteToggle";
 import { StatusBadge } from "./StatusBadge";
 
 type MissionSectionListProps = {
@@ -13,6 +15,10 @@ type MissionSectionListProps = {
   selectedMissionId?: string;
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
   emptyMessage: string;
+  isFavourite?: (missionId: string) => boolean;
+  onToggleFavourite?: (missionId: string) => void;
+  bulkSelectedIds?: Set<string>;
+  onToggleBulk?: (missionId: string) => void;
 };
 
 export function MissionSectionList({
@@ -24,6 +30,10 @@ export function MissionSectionList({
   selectedMissionId,
   onNavigate,
   emptyMessage,
+  isFavourite,
+  onToggleFavourite,
+  bulkSelectedIds,
+  onToggleBulk,
 }: MissionSectionListProps) {
   return (
     <section className="panel surface mission-section-panel">
@@ -51,8 +61,29 @@ export function MissionSectionList({
                 className={`mission-card ${selectedMissionId === mission.missionId ? "is-selected" : ""}`}
               >
                 <div className="mission-card-header">
-                  <strong>{mission.title}</strong>
-                  <StatusBadge tone={missionStatusTone(mission.status)}>{mission.status}</StatusBadge>
+                  <span className="mission-card-header-lead">
+                    {onToggleBulk ? (
+                      <input
+                        type="checkbox"
+                        className="bulk-select-checkbox"
+                        checked={bulkSelectedIds?.has(mission.missionId) ?? false}
+                        onChange={() => onToggleBulk(mission.missionId)}
+                        aria-label={`Select ${mission.title} for bulk actions`}
+                      />
+                    ) : null}
+                    {onToggleFavourite ? (
+                      <FavouriteToggle
+                        active={isFavourite?.(mission.missionId) ?? false}
+                        onToggle={() => onToggleFavourite(mission.missionId)}
+                        label="favourite mission"
+                      />
+                    ) : null}
+                    <strong>{mission.title}</strong>
+                  </span>
+                  <span className="mission-card-header-badges">
+                    <DependencyBadge count={mission.capabilityIds.length} label="capability deps" />
+                    <StatusBadge tone={missionStatusTone(mission.status)}>{mission.status}</StatusBadge>
+                  </span>
                 </div>
                 <p className="mission-card-id">{mission.missionId}</p>
                 <div className="mission-chip-row">
