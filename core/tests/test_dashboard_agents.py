@@ -115,5 +115,23 @@ def test_agent_dashboard_service_reports_counts_and_recent_activity():
     assert [item["execution_id"] for item in dashboard.completed_executions()] == [completed_execution.id]
     assert [item["execution_id"] for item in dashboard.failed_executions()] == [failed_execution.id]
     assert any(event["event_name"] == "AgentMissionExecutionCompleted" for event in dashboard.recent_agent_activity())
+
+    agent_records = {item["agent_id"]: item for item in dashboard.agents()}
+    assert set(agent_records) == {"agent-hermes", "agent-athena"}
+    assert agent_records["agent-hermes"]["runtime_status"] == "available"
+    assert agent_records["agent-hermes"]["capability_ids"] == ["cap-search"]
+
+    assignment_records = dashboard.assignments()
+    assert {running_assignment.id, completed_assignment.id, failed_assignment.id} == {
+        item["assignment_id"] for item in assignment_records
+    }
+    assert {item["assignment_id"]: item["status"] for item in assignment_records} == {
+        running_assignment.id: "running",
+        completed_assignment.id: "completed",
+        failed_assignment.id: "failed",
+    }
+
     built = dashboard.build_dashboard()
     assert built["execution_counts"]["failed"] == 1
+    assert len(built["agents"]) == 2
+    assert len(built["assignments"]) == 3

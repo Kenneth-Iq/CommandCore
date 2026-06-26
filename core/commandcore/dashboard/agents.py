@@ -106,6 +106,15 @@ class AgentDashboardService:
             if execution.status == "failed"
         ]
 
+    def agents(self) -> list[dict[str, object]]:
+        return [self._serialize_agent(agent) for agent in self.agent_registry.list_agents()]
+
+    def assignments(self) -> list[dict[str, object]]:
+        return [
+            self._serialize_assignment(assignment)
+            for assignment in self.agent_runtime.list_assignments()
+        ]
+
     def recent_agent_activity(self, limit: int = 10) -> list[dict[str, object]]:
         events = [
             self._serialize_event(event)
@@ -121,10 +130,38 @@ class AgentDashboardService:
             "mission_assignment_counts": self.mission_assignment_counts(),
             "execution_counts": self.execution_counts(),
             "executions_by_mission": self.executions_by_mission(),
+            "agents": self.agents(),
+            "assignments": self.assignments(),
             "active_executions": self.active_executions(),
             "completed_executions": self.completed_executions(),
             "failed_executions": self.failed_executions(),
             "recent_agent_activity": self.recent_agent_activity(),
+        }
+
+    @staticmethod
+    def _serialize_agent(agent: object) -> dict[str, object]:
+        return {
+            "agent_id": getattr(agent, "id"),
+            "name": getattr(agent, "name"),
+            "role": getattr(agent, "role"),
+            "runtime_status": str(getattr(agent, "runtime_status")),
+            "capability_ids": list(getattr(agent, "capability_ids")),
+            "mission_queue": list(getattr(agent, "mission_queue")),
+            "state_summary": getattr(agent, "state_summary"),
+        }
+
+    @staticmethod
+    def _serialize_assignment(assignment: object) -> dict[str, object]:
+        return {
+            "assignment_id": getattr(assignment, "id"),
+            "agent_id": getattr(assignment, "agent_id"),
+            "mission_id": getattr(assignment, "mission_id"),
+            "task_id": getattr(assignment, "task_id"),
+            "capability_id": getattr(assignment, "capability_id"),
+            "status": getattr(assignment, "status"),
+            "error": getattr(assignment, "error"),
+            "created_at": getattr(assignment, "created_at"),
+            "updated_at": getattr(assignment, "updated_at"),
         }
 
     @staticmethod
