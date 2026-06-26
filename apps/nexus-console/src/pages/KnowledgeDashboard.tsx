@@ -15,12 +15,10 @@ import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { NavPage, PageData } from "../data/mockKernel";
 import type { KnowledgeAssetRecord, KnowledgeCentreData } from "../data/nexusCentres";
-import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
-import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { useExecutiveSimulation } from "../simulation";
+import { useRuntimeContext } from "../runtimeContext";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type KnowledgeDashboardProps = {
@@ -57,14 +55,7 @@ export function KnowledgeDashboard({ page, source, sourceMessage, knowledgeCentr
     ? knowledgeCentre.assets.find((asset) => asset.assetId === selection.assetId)
     : undefined;
   const relationshipData = selection.assetId ? buildRelationshipCard("knowledge", selection.assetId, world) : undefined;
-  const simulation = useExecutiveSimulation(world);
-  const evidenceRegistry = useMemo(() => {
-    const recommendations = buildRecommendations(world, simulation);
-    const decisions = buildDecisionQueue(world, simulation, recommendations);
-    const followUps = buildFollowUps(world, simulation);
-    const approvals = buildApprovalCards(world, simulation);
-    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
-  }, [world, simulation]);
+  const { evidenceRegistry } = useRuntimeContext();
   const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
 
   const scopesOf = (kind: string) => uniqueOptions(

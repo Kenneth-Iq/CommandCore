@@ -3,6 +3,7 @@ import type { NavPage } from "../data/mockKernel";
 import type { RouteSelection } from "../routing";
 import type { ExecutiveSimulationState } from "../simulation";
 import type { WorldData } from "../worldModel";
+import { processConversationTurn } from "../conversationOrchestrator";
 import { EvidenceCard } from "./EvidenceCard";
 import { StatusBadge } from "./StatusBadge";
 
@@ -11,6 +12,7 @@ type ChatMessage = {
   sender: "jarvis" | "user";
   text: string;
   route?: { label: string; page: NavPage; selection?: RouteSelection };
+  approvalNote?: string;
 };
 
 type BriefingCard = {
@@ -116,50 +118,7 @@ export function JarvisConversationPanel({ world, simulation, onNavigate, onInves
   const [isTyping, setIsTyping] = useState(false);
 
   function generateReply(input: string): ChatMessage {
-    const normalized = input.toLowerCase();
-
-    if (normalized.includes("mission")) {
-      const count = allMissions.length;
-      return {
-        id: `jarvis-${Date.now()}`,
-        sender: "jarvis",
-        text: `There are ${count} missions in view, ${blockedMissions.length} blocked and ${overdueMissions.length} running behind. Want me to open Mission Centre?`,
-        route: { label: "Open Mission Centre", page: "missions" },
-      };
-    }
-    if (normalized.includes("agent")) {
-      return {
-        id: `jarvis-${Date.now()}`,
-        sender: "jarvis",
-        text: `${world.agentCentre.profiles.length} agents are registered; ${offlineAgents.length} are offline or blocked right now.`,
-        route: { label: "Open Agent Centre", page: "agents" },
-      };
-    }
-    if (normalized.includes("tool")) {
-      return {
-        id: `jarvis-${Date.now()}`,
-        sender: "jarvis",
-        text: `${world.toolCentre.tools.length} tools are registered; ${unhealthyTools.length} are reporting degraded or down health.`,
-        route: { label: "Open Tool Centre", page: "tools" },
-      };
-    }
-    if (normalized.includes("knowledge")) {
-      return {
-        id: `jarvis-${Date.now()}`,
-        sender: "jarvis",
-        text: `${world.knowledgeCentre.assets.length} knowledge assets are tracked; ${recentlyLinkedKnowledge.length} were recently linked.`,
-        route: { label: "Open Knowledge Centre", page: "knowledge" },
-      };
-    }
-    if (normalized.includes("conversation")) {
-      return {
-        id: `jarvis-${Date.now()}`,
-        sender: "jarvis",
-        text: `${world.conversationCentre.conversations.length} conversations are active across the portfolio.`,
-        route: { label: "Open Conversation Centre", page: "conversations" },
-      };
-    }
-    if (normalized.includes("attention") || normalized.includes("today")) {
+    if (input.toLowerCase().includes("attention") || input.toLowerCase().includes("today")) {
       return {
         id: `jarvis-${Date.now()}`,
         sender: "jarvis",
@@ -168,10 +127,13 @@ export function JarvisConversationPanel({ world, simulation, onNavigate, onInves
       };
     }
 
+    const turn = processConversationTurn(input, world, simulation);
     return {
       id: `jarvis-${Date.now()}`,
       sender: "jarvis",
-      text: "Conversational intelligence is simulated in Beta-1 — AI calls are disabled. Try asking about missions, agents, tools, knowledge, or conversations.",
+      text: turn.suggestedResponse,
+      route: turn.routeSuggestion,
+      approvalNote: turn.approval.status === "would_require_approval" ? turn.approval.note : undefined,
     };
   }
 
@@ -216,6 +178,11 @@ export function JarvisConversationPanel({ world, simulation, onNavigate, onInves
               <p>{message.text}</p>
               {message.route ? (
                 <EvidenceCard evidence={message.route} world={world} onNavigate={onNavigate} onInvestigate={onInvestigate} />
+              ) : null}
+              {message.approvalNote ? (
+                <p className="jarvis-approval-note">
+                  <StatusBadge tone="warning">Would Require Approval</StatusBadge> {message.approvalNote}
+                </p>
               ) : null}
             </div>
           </div>

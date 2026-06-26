@@ -15,12 +15,10 @@ import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { NavPage, PageData } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
-import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
-import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { useExecutiveSimulation } from "../simulation";
+import { useRuntimeContext } from "../runtimeContext";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type WorkspacesDashboardProps = {
@@ -70,14 +68,7 @@ export function WorkspacesDashboard({ page, source, sourceMessage, portfolioExpl
         ? buildRelationshipCard("project", selection.projectId, world)
         : undefined;
 
-  const simulation = useExecutiveSimulation(world);
-  const evidenceRegistry = useMemo(() => {
-    const recommendations = buildRecommendations(world, simulation);
-    const decisions = buildDecisionQueue(world, simulation, recommendations);
-    const followUps = buildFollowUps(world, simulation);
-    const approvals = buildApprovalCards(world, simulation);
-    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
-  }, [world, simulation]);
+  const { evidenceRegistry } = useRuntimeContext();
 
   const statusOptions = useMemo(() => uniqueOptions([
     ...portfolioExplorer.workspaces.map((workspace) => workspace.status),

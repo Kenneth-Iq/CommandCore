@@ -13,7 +13,7 @@ import type { DataSource } from "../api/commandcoreApi";
 import type { NavPage, PageData } from "../data/mockKernel";
 import { useBoardroomLayout, useFavouriteDashboards, useWatchlist, type BoardroomWidgetId } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { useExecutiveSimulation } from "../simulation";
+import { useRuntimeContext } from "../runtimeContext";
 import type { WorldData } from "../worldModel";
 
 type ExecutiveBoardroomProps = {
@@ -40,7 +40,7 @@ const widgetSubtitles: Record<BoardroomWidgetId, string> = {
 };
 
 export function ExecutiveBoardroom({ page, pages, world, source, sourceMessage, onNavigate }: ExecutiveBoardroomProps) {
-  const simulation = useExecutiveSimulation(world);
+  const { simulation } = useRuntimeContext();
   const { layout, setSize, toggleVisible, move, reset } = useBoardroomLayout();
   const { entries: watchlistEntries, remove: removeFromWatchlist } = useWatchlist();
   const { favouritePages, toggle: toggleFavouritePage } = useFavouriteDashboards();

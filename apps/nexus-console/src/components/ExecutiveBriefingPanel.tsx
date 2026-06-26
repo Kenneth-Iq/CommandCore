@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { Briefing, BriefingPeriod } from "../executiveAssistant";
+import { BriefingModeOverlay } from "./BriefingModeOverlay";
 import { StatusBadge } from "./StatusBadge";
 
 type ExecutiveBriefingPanelProps = {
@@ -14,12 +16,23 @@ const periodLabel: Record<BriefingPeriod, string> = {
 };
 
 export function ExecutiveBriefingPanel({ greeting, activePeriod, briefings }: ExecutiveBriefingPanelProps) {
+  const [briefingModeOpen, setBriefingModeOpen] = useState(false);
+  const activeBriefing = briefings.find((briefing) => briefing.period === activePeriod) ?? briefings[0];
+
   return (
     <section className="panel surface executive-briefing-panel">
       <div className="panel-header">
         <div className="panel-title-stack">
           <h3>{greeting} Here's your executive briefing.</h3>
           <span>Morning, afternoon, and evening briefings update automatically through the day.</span>
+        </div>
+        <div className="executive-briefing-mode-controls">
+          <button type="button" className="route-chip" onClick={() => setBriefingModeOpen(true)} disabled={!activeBriefing}>
+            Briefing Mode
+          </button>
+          <button type="button" className="route-chip is-disabled" title="Theatre Mode is planned but not yet implemented." disabled>
+            Theatre Mode (Coming Soon)
+          </button>
         </div>
       </div>
 
@@ -42,6 +55,10 @@ export function ExecutiveBriefingPanel({ greeting, activePeriod, briefings }: Ex
           </article>
         ))}
       </div>
+
+      {briefingModeOpen && activeBriefing ? (
+        <BriefingModeOverlay briefing={activeBriefing} greeting={greeting} onClose={() => setBriefingModeOpen(false)} />
+      ) : null}
     </section>
   );
 }

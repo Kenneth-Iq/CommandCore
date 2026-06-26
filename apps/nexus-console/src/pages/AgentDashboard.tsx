@@ -21,12 +21,10 @@ import { SortControl, type SortDirection } from "../components/SortControl";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import { agentRuntimeTone, type AgentCentreData, type AgentProfile, type NavPage, type PageData } from "../data/mockKernel";
-import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
-import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import { useFavourites, useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { useExecutiveSimulation } from "../simulation";
+import { useRuntimeContext } from "../runtimeContext";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type AgentDashboardProps = {
@@ -73,14 +71,7 @@ export function AgentDashboard({ page, agentCentre, world, selection, source, so
     ? agentCentre.assignments.find((assignment) => assignment.agentId === selectedAgent.agentId)
     : undefined;
   const relationshipData = selection.agentId ? buildRelationshipCard("agent", selection.agentId, world) : undefined;
-  const simulation = useExecutiveSimulation(world);
-  const evidenceRegistry = useMemo(() => {
-    const recommendations = buildRecommendations(world, simulation);
-    const decisions = buildDecisionQueue(world, simulation, recommendations);
-    const followUps = buildFollowUps(world, simulation);
-    const approvals = buildApprovalCards(world, simulation);
-    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
-  }, [world, simulation]);
+  const { evidenceRegistry } = useRuntimeContext();
 
   const statusOptions = useMemo(() => uniqueOptions(agentCentre.profiles.map((agent) => agent.runtimeStatus)), [agentCentre.profiles]);
   const capabilityOptions = useMemo(() => uniqueOptions(agentCentre.profiles.flatMap((agent) => agent.capabilityIds)), [agentCentre.profiles]);

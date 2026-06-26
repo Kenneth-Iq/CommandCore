@@ -22,12 +22,10 @@ import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import { missionStatusTone, type ConversationCentreData, type MissionCentreData, type MissionRecord, type NavPage, type PageData } from "../data/mockKernel";
 import type { KnowledgeCentreData } from "../data/nexusCentres";
-import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
-import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import { useFavourites, useSavedFilters, useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { useExecutiveSimulation } from "../simulation";
+import { useRuntimeContext } from "../runtimeContext";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type MissionDashboardProps = {
@@ -104,14 +102,7 @@ export function MissionDashboard({
     ? knowledgeCentre.assets.find((asset) => asset.scopes.some((scope) => scope.kind === "mission" && scope.value === selectedMission.missionId))
     : undefined;
   const relationshipData = selection.missionId ? buildRelationshipCard("mission", selection.missionId, world) : undefined;
-  const simulation = useExecutiveSimulation(world);
-  const evidenceRegistry = useMemo(() => {
-    const recommendations = buildRecommendations(world, simulation);
-    const decisions = buildDecisionQueue(world, simulation, recommendations);
-    const followUps = buildFollowUps(world, simulation);
-    const approvals = buildApprovalCards(world, simulation);
-    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
-  }, [world, simulation]);
+  const { evidenceRegistry } = useRuntimeContext();
 
   const agentOptions = useMemo(() => uniqueOptions(missions.map((mission) => mission.assignedAgentId)), [missions]);
   const capabilityOptions = useMemo(() => uniqueOptions(missions.flatMap((mission) => mission.capabilityIds)), [missions]);

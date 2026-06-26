@@ -19,11 +19,15 @@ import {
   type SearchEntry,
 } from "./data/nexusCentres";
 import { useRecentlyViewed } from "./operatorPrefs";
+import { RuntimeProvider } from "./runtimeContext";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveBoardroom } from "./pages/ExecutiveBoardroom";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
 import { ExecutiveHome } from "./pages/ExecutiveHome";
+import { JarvisPresence } from "./components/JarvisPresence";
+import { LiveTicker } from "./components/LiveTicker";
+import { OperationalPulse } from "./components/OperationalPulse";
 import { HealthReadiness } from "./pages/HealthReadiness";
 import { KnowledgeDashboard } from "./pages/KnowledgeDashboard";
 import { MissionDashboard } from "./pages/MissionDashboard";
@@ -301,18 +305,23 @@ export default function App() {
   ]);
 
   return (
-    <div className="app-frame">
-      <Sidebar activePage={activePage} onSelect={(page) => handleNavigate(page)} />
-      <main className="console-main">
-        <CommandBar
-          activePage={activePage}
-          onNavigate={handleNavigate}
-          searchEntries={searchEntries}
-        />
-        <ContextBreadcrumb segments={breadcrumbSegments} onNavigate={handleNavigate} />
-        {hasLoaded ? renderedPage : <LoadingState label="Connecting To CommandCore" detail="Loading the current operating picture from the live API or seeded fallback..." />}
-      </main>
-    </div>
+    <RuntimeProvider world={world} activePage={activePage} onNavigate={handleNavigate}>
+      <div className="app-frame">
+        <Sidebar activePage={activePage} onSelect={(page) => handleNavigate(page)} />
+        <main className="console-main">
+          <CommandBar
+            activePage={activePage}
+            onNavigate={handleNavigate}
+            searchEntries={searchEntries}
+          />
+          {hasLoaded ? <OperationalPulse /> : null}
+          {hasLoaded ? <LiveTicker /> : null}
+          <ContextBreadcrumb segments={breadcrumbSegments} onNavigate={handleNavigate} />
+          {hasLoaded ? renderedPage : <LoadingState label="Connecting To CommandCore" detail="Loading the current operating picture from the live API or seeded fallback..." />}
+        </main>
+        {hasLoaded ? <JarvisPresence /> : null}
+      </div>
+    </RuntimeProvider>
   );
 }
 

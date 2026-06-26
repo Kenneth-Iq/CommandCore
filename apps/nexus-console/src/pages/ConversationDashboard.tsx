@@ -20,12 +20,10 @@ import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
 import type { ConversationCentreData, ConversationRecord, NavPage, PageData } from "../data/mockKernel";
-import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
-import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { useExecutiveSimulation } from "../simulation";
+import { useRuntimeContext } from "../runtimeContext";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type ConversationDashboardProps = {
@@ -66,14 +64,7 @@ export function ConversationDashboard({ page, conversationCentre, world, selecti
     ? conversationCentre.knowledgeLinks.find((link) => link.conversationId === selectedConversation.conversationId)
     : undefined;
   const relationshipData = selection.conversationId ? buildRelationshipCard("conversation", selection.conversationId, world) : undefined;
-  const simulation = useExecutiveSimulation(world);
-  const evidenceRegistry = useMemo(() => {
-    const recommendations = buildRecommendations(world, simulation);
-    const decisions = buildDecisionQueue(world, simulation, recommendations);
-    const followUps = buildFollowUps(world, simulation);
-    const approvals = buildApprovalCards(world, simulation);
-    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
-  }, [world, simulation]);
+  const { evidenceRegistry } = useRuntimeContext();
   const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
 
   const workspaceOptions = useMemo(() => uniqueOptions(conversationCentre.conversations.map((conversation) => conversation.workspaceId)), [conversationCentre.conversations]);

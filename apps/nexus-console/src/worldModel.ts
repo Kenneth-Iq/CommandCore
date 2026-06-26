@@ -25,6 +25,8 @@ export type WorldData = {
 };
 
 export type WorldNodeKind =
+  | "galaxy"
+  | "planet"
   | "portfolio"
   | "company"
   | "workspace"
@@ -203,6 +205,28 @@ export function buildWorldTree(world: WorldData): WorldNode {
     page: "workspaces",
     selection: {},
     children: companies,
+  };
+}
+
+export function buildGalaxyTree(world: WorldData): WorldNode {
+  const portfolioRoot = buildWorldTree(world);
+
+  const planetNode: WorldNode = {
+    id: "planet-enterprise",
+    kind: "planet",
+    label: "Enterprise",
+    page: "workspaces",
+    selection: {},
+    children: [portfolioRoot],
+  };
+
+  return {
+    id: "galaxy-prime",
+    kind: "galaxy",
+    label: "Prime Galaxy",
+    page: "workspaces",
+    selection: {},
+    children: [planetNode],
   };
 }
 

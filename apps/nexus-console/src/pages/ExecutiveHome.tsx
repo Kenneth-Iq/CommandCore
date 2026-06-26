@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DependencyGraph } from "../components/DependencyGraph";
 import { ExecutiveAlerts, severityFromTone } from "../components/ExecutiveAlerts";
-import { ExecutiveFocusPanel, emptyFocusState, type ExecutiveFocusState } from "../components/ExecutiveFocusPanel";
+import { ExecutiveFocusPanel, type ExecutiveFocusState } from "../components/ExecutiveFocusPanel";
 import { ExecutiveHealthBoard } from "../components/ExecutiveHealthBoard";
 import { EnterpriseExplorer } from "../components/EnterpriseExplorer";
+import { GalaxyNavigator } from "../components/GalaxyNavigator";
 import { ApprovalCardsPanel } from "../components/ApprovalCardsPanel";
 import { BriefingTypeExplorer } from "../components/BriefingTypeExplorer";
 import { ConversationContextBar } from "../components/ConversationContextBar";
@@ -22,6 +23,7 @@ import { MetricCard } from "../components/MetricCard";
 import { OperationalTimeline } from "../components/OperationalTimeline";
 import { PageHeader } from "../components/PageHeader";
 import { SourceStrip } from "../components/SourceStrip";
+import { SystemLayerLegend } from "../components/SystemLayerLegend";
 import { StatusBadge } from "../components/StatusBadge";
 import type { RouteSelection } from "../routing";
 import type { DataSource } from "../api/commandcoreApi";
@@ -40,22 +42,17 @@ import type {
   StatusTone,
 } from "../data/mockKernel";
 import type { CompanyRecord, KnowledgeAssetRecord, KnowledgeCentreData, PortfolioExplorerData, ProjectRecord, WorkspaceRecord } from "../data/nexusCentres";
-import { buildWorldSummary, buildWorldTree, type WorldData } from "../worldModel";
+import { buildGalaxyTree, buildWorldSummary, buildWorldTree, type WorldData } from "../worldModel";
 import {
-  buildApprovalCards,
   buildBriefings,
   buildConversationContext,
   buildConversationMemory,
-  buildDecisionQueue,
   buildExtendedBriefings,
-  buildFollowUps,
-  buildRecommendations,
   buildTimeline,
   resolveGreeting,
 } from "../executiveAssistant";
-import { buildEvidenceRegistry } from "../evidenceRegistry";
-import { useExecutiveSimulation } from "../simulation";
 import type { RecentlyViewedEntry } from "../operatorPrefs";
+import { useRuntimeContext } from "../runtimeContext";
 
 type ExecutiveHomeProps = {
   page: PageData;
@@ -102,7 +99,7 @@ export function ExecutiveHome({
   sourceMessage,
   onNavigate,
 }: ExecutiveHomeProps) {
-  const [focus, setFocus] = useState<ExecutiveFocusState>(emptyFocusState());
+  const { simulation, focus, setFocus, recommendations, decisionQueue, pendingFollowUps, approvalCards, evidenceRegistry } = useRuntimeContext();
   const [expandedWorldNodes, setExpandedWorldNodes] = useState<Set<string>>(() => loadExpandedWorldNodes());
 
   useEffect(() => {
@@ -114,6 +111,7 @@ export function ExecutiveHome({
     [portfolioExplorer, missionCentre, agentCentre, toolCentre, conversationCentre, knowledgeCentre],
   );
   const worldTree = useMemo(() => buildWorldTree(world), [world]);
+  const galaxyTree = useMemo(() => buildGalaxyTree(world), [world]);
   const worldSummary = useMemo(() => buildWorldSummary(world), [world]);
 
   function toggleWorldNode(id: string) {
@@ -158,15 +156,10 @@ export function ExecutiveHome({
     };
   }, [allMissions, agentCentre.profiles, conversationCentre.conversations, focus, knowledgeCentre.assets, portfolioExplorer, toolCentre.tools]);
 
-  const simulation = useExecutiveSimulation(world);
   const [investigation, setInvestigation] = useState<string | undefined>(undefined);
   const handleInvestigate = useCallback((label: string) => setInvestigation(label), []);
   const { period: activeBriefingPeriod, greeting } = useMemo(() => resolveGreeting(), []);
   const briefings = useMemo(() => buildBriefings(world, simulation), [world, simulation]);
-  const recommendations = useMemo(() => buildRecommendations(world, simulation), [world, simulation]);
-  const decisionQueue = useMemo(() => buildDecisionQueue(world, simulation, recommendations), [world, simulation, recommendations]);
-  const pendingFollowUps = useMemo(() => buildFollowUps(world, simulation), [world, simulation]);
-  const approvalCards = useMemo(() => buildApprovalCards(world, simulation), [world, simulation]);
   const timelineEntries = useMemo(
     () => buildTimeline(briefings, recommendations, decisionQueue, world),
     [briefings, recommendations, decisionQueue, world],
@@ -178,10 +171,6 @@ export function ExecutiveHome({
   const conversationContext = useMemo(
     () => buildConversationContext(focus, world, investigation),
     [focus, world, investigation],
-  );
-  const evidenceRegistry = useMemo(
-    () => buildEvidenceRegistry(recommendations, decisionQueue, pendingFollowUps, approvalCards),
-    [recommendations, decisionQueue, pendingFollowUps, approvalCards],
   );
   const extendedBriefings = useMemo(() => buildExtendedBriefings(world, simulation, focus), [world, simulation, focus]);
   const healthMetrics = useMemo(() => buildHealthMetrics(pages, filtered), [pages, filtered]);
@@ -221,6 +210,8 @@ export function ExecutiveHome({
         status={page.status}
       />
 
+      <SystemLayerLegend />
+
       <ConversationContextBar context={conversationContext} />
 
       <JarvisConversationPanel world={world} simulation={simulation} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
@@ -255,6 +246,8 @@ export function ExecutiveHome({
         onToggle={toggleWorldNode}
         onNavigate={onNavigate}
       />
+
+      <GalaxyNavigator tree={galaxyTree} selection={{}} onNavigate={onNavigate} />
 
       <RecentlyViewedPanel items={recentlyViewed} onNavigate={onNavigate} />
 

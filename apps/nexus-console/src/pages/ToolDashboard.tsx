@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { EventFeed } from "../components/EventFeed";
 import { FilterBar } from "../components/FilterBar";
 import { FilterEmptyState } from "../components/FilterEmptyState";
+import { HermesBridgePanel } from "../components/HermesBridgePanel";
 import { HermesClawPreparationPanel } from "../components/HermesClawPreparationPanel";
 import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
@@ -20,12 +21,11 @@ import { ToolPermissionBreakdown } from "../components/ToolPermissionBreakdown";
 import { ToolRegistryPanel } from "../components/ToolRegistryPanel";
 import type { DataSource } from "../api/commandcoreApi";
 import { toolPermissionTone, type NavPage, type PageData, type ToolCentreData, type ToolRecord } from "../data/mockKernel";
-import { buildApprovalCards, buildDecisionQueue, buildFollowUps, buildRecommendations } from "../executiveAssistant";
-import { buildEvidenceRegistry } from "../evidenceRegistry";
 import { pinSelected, textMatches, uniqueOptions } from "../filtering";
 import { useWatchlist } from "../operatorPrefs";
 import type { RouteSelection } from "../routing";
-import { useExecutiveSimulation } from "../simulation";
+import { useRuntimeContext } from "../runtimeContext";
+import { buildHermesActionPreviews } from "../hermesBridge";
 import { buildImpactAnalysis, buildRelationshipCard, type WorldData } from "../worldModel";
 
 type ToolDashboardProps = {
@@ -65,14 +65,8 @@ export function ToolDashboard({ page, toolCentre, world, selection, source, sour
       ].find((invocation) => invocation.toolId === selectedTool.toolId)
     : undefined;
   const relationshipData = selection.toolId ? buildRelationshipCard("tool", selection.toolId, world) : undefined;
-  const simulation = useExecutiveSimulation(world);
-  const evidenceRegistry = useMemo(() => {
-    const recommendations = buildRecommendations(world, simulation);
-    const decisions = buildDecisionQueue(world, simulation, recommendations);
-    const followUps = buildFollowUps(world, simulation);
-    const approvals = buildApprovalCards(world, simulation);
-    return buildEvidenceRegistry(recommendations, decisions, followUps, approvals);
-  }, [world, simulation]);
+  const { evidenceRegistry, simulation } = useRuntimeContext();
+  const hermesActions = useMemo(() => buildHermesActionPreviews(world, simulation), [world, simulation]);
   const { isWatched, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
 
   const permissionOptions = useMemo(() => uniqueOptions(toolCentre.tools.map((tool) => tool.permissionLevel)), [toolCentre.tools]);
@@ -200,6 +194,8 @@ export function ToolDashboard({ page, toolCentre, world, selection, source, sour
       </section>
 
       <HermesClawPreparationPanel counts={toolCentre.counts} invocationCounts={toolCentre.invocationCounts} />
+
+      <HermesBridgePanel actions={hermesActions} onNavigate={onNavigate} />
 
       <EventFeed title={page.activityTitle} items={page.activity} emptyMessage={page.emptyState} />
     </div>

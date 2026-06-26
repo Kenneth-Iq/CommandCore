@@ -17,6 +17,8 @@ type EnterpriseExplorerProps = {
 };
 
 const kindTag: Record<WorldNode["kind"], string> = {
+  galaxy: "GLXY",
+  planet: "PLNT",
   portfolio: "WRLD",
   company: "CO",
   workspace: "WS",
@@ -36,7 +38,7 @@ function isNodeActive(node: WorldNode, selection: RouteSelection): boolean {
   return keys.every((key) => selection[key] === node.selection[key]);
 }
 
-type WorldTreeNodeProps = {
+export type WorldTreeNodeProps = {
   node: WorldNode;
   depth: number;
   selection: RouteSelection;
@@ -45,7 +47,7 @@ type WorldTreeNodeProps = {
   onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
-function WorldTreeNode({ node, depth, selection, expanded, onToggle, onNavigate }: WorldTreeNodeProps) {
+export function WorldTreeNode({ node, depth, selection, expanded, onToggle, onNavigate }: WorldTreeNodeProps) {
   const hasChildren = node.children.length > 0;
   const isOpen = expanded.has(node.id);
   const active = isNodeActive(node, selection);
