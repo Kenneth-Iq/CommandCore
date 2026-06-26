@@ -10,16 +10,17 @@ import { ToolMonitor } from "../components/ToolMonitor";
 import { ToolPermissionBreakdown } from "../components/ToolPermissionBreakdown";
 import { ToolRegistryPanel } from "../components/ToolRegistryPanel";
 import type { DataSource } from "../api/commandcoreApi";
-import type { PageData, ToolCentreData } from "../data/mockKernel";
+import type { NavPage, PageData, ToolCentreData } from "../data/mockKernel";
 
 type ToolDashboardProps = {
   page: PageData;
   toolCentre: ToolCentreData;
   source: DataSource;
   sourceMessage?: string;
+  onNavigate: (page: NavPage) => void;
 };
 
-export function ToolDashboard({ page, toolCentre, source, sourceMessage }: ToolDashboardProps) {
+export function ToolDashboard({ page, toolCentre, source, sourceMessage, onNavigate }: ToolDashboardProps) {
   return (
     <div className="page-shell">
       <PageHeader page={page} />
@@ -50,7 +51,7 @@ export function ToolDashboard({ page, toolCentre, source, sourceMessage }: ToolD
       />
 
       <section className="mission-support-grid">
-        <ToolRegistryPanel tools={toolCentre.tools} />
+        <ToolRegistryPanel tools={toolCentre.tools} onNavigate={onNavigate} />
         <ToolInvocationHistoryPanel invocations={toolCentre.invocations} />
       </section>
 

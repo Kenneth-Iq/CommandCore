@@ -9,16 +9,28 @@ import { MissionTimeline } from "../components/MissionTimeline";
 import { PageHeader } from "../components/PageHeader";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
-import type { MissionCentreData, PageData } from "../data/mockKernel";
+import type { ConversationCentreData, MissionCentreData, NavPage, PageData } from "../data/mockKernel";
+import type { KnowledgeCentreData } from "../data/nexusCentres";
 
 type MissionDashboardProps = {
   page: PageData;
   missionCentre: MissionCentreData;
+  conversationCentre: ConversationCentreData;
+  knowledgeCentre: KnowledgeCentreData;
   source: DataSource;
   sourceMessage?: string;
+  onNavigate: (page: NavPage) => void;
 };
 
-export function MissionDashboard({ page, missionCentre, source, sourceMessage }: MissionDashboardProps) {
+export function MissionDashboard({
+  page,
+  missionCentre,
+  conversationCentre,
+  knowledgeCentre,
+  source,
+  sourceMessage,
+  onNavigate,
+}: MissionDashboardProps) {
   return (
     <div className="page-shell">
       <PageHeader page={page} />
@@ -47,18 +59,27 @@ export function MissionDashboard({ page, missionCentre, source, sourceMessage }:
           title="Active Missions"
           tone="active"
           records={missionCentre.active}
+          conversationCentre={conversationCentre}
+          knowledgeCentre={knowledgeCentre}
+          onNavigate={onNavigate}
           emptyMessage="No missions are currently active."
         />
         <MissionSectionList
           title="Completed Missions"
           tone="complete"
           records={missionCentre.completed}
+          conversationCentre={conversationCentre}
+          knowledgeCentre={knowledgeCentre}
+          onNavigate={onNavigate}
           emptyMessage="No missions have completed yet."
         />
         <MissionSectionList
           title="Failed Missions"
           tone="warning"
           records={missionCentre.failed}
+          conversationCentre={conversationCentre}
+          knowledgeCentre={knowledgeCentre}
+          onNavigate={onNavigate}
           emptyMessage="No mission failures recorded."
         />
       </section>

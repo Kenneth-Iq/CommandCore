@@ -1,11 +1,12 @@
-import type { ConversationRecord, ConversationThreadRecord } from "../data/mockKernel";
+import type { ConversationRecord, ConversationThreadRecord, NavPage } from "../data/mockKernel";
 
 type ConversationThreadListPanelProps = {
   conversations: ConversationRecord[];
   threads: ConversationThreadRecord[];
+  onNavigate: (page: NavPage) => void;
 };
 
-export function ConversationThreadListPanel({ conversations, threads }: ConversationThreadListPanelProps) {
+export function ConversationThreadListPanel({ conversations, threads, onNavigate }: ConversationThreadListPanelProps) {
   return (
     <section className="panel surface conversation-thread-panel">
       <div className="panel-header">
@@ -38,13 +39,19 @@ export function ConversationThreadListPanel({ conversations, threads }: Conversa
                     </span>
                   ))}
                   {conversation.missionId ? (
-                    <span className="mission-chip mission-chip-muted">{conversation.missionId}</span>
+                    <button type="button" className="mission-chip mission-chip-muted route-chip-button" onClick={() => onNavigate("missions")}>
+                      {conversation.missionId}
+                    </button>
                   ) : null}
                   {conversation.projectId ? (
-                    <span className="mission-chip mission-chip-muted">{conversation.projectId}</span>
+                    <button type="button" className="mission-chip mission-chip-muted route-chip-button" onClick={() => onNavigate("workspaces")}>
+                      {conversation.projectId}
+                    </button>
                   ) : null}
                   {conversation.workspaceId ? (
-                    <span className="mission-chip mission-chip-muted">{conversation.workspaceId}</span>
+                    <button type="button" className="mission-chip mission-chip-muted route-chip-button" onClick={() => onNavigate("workspaces")}>
+                      {conversation.workspaceId}
+                    </button>
                   ) : null}
                 </div>
                 {conversationThreads.length ? (
@@ -56,6 +63,16 @@ export function ConversationThreadListPanel({ conversations, threads }: Conversa
                     ))}
                   </div>
                 ) : null}
+                <div className="route-chip-row mission-route-row">
+                  {conversation.missionId ? (
+                    <button type="button" className="route-chip" onClick={() => onNavigate("missions")}>
+                      Conversation → Mission
+                    </button>
+                  ) : null}
+                  <button type="button" className="route-chip" onClick={() => onNavigate("knowledge")}>
+                    Conversation → Knowledge
+                  </button>
+                </div>
               </article>
             );
           })}

@@ -27,6 +27,18 @@ import {
   type ToolInvocationRecord,
   type ToolRecord,
 } from "../data/mockKernel";
+import {
+  mockKnowledgeCentre,
+  mockPortfolioExplorer,
+  type CapabilityRecord,
+  type CompanyRecord,
+  type KnowledgeAssetRecord,
+  type KnowledgeCentreData,
+  type PortfolioExplorerData,
+  type ProjectRecord,
+  type ScopeBadgeRecord,
+  type WorkspaceRecord,
+} from "../data/nexusCentres";
 
 export type DataSource = "live" | "mock";
 
@@ -36,6 +48,8 @@ export type ConsoleDataResult = {
   agentCentre: AgentCentreData;
   toolCentre: ToolCentreData;
   conversationCentre: ConversationCentreData;
+  knowledgeCentre: KnowledgeCentreData;
+  portfolioExplorer: PortfolioExplorerData;
   source: DataSource;
   baseUrl?: string;
   error?: string;
@@ -55,6 +69,8 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
       agentCentre: mockAgentCentre,
       toolCentre: mockToolCentre,
       conversationCentre: mockConversationCentre,
+      knowledgeCentre: mockKnowledgeCentre,
+      portfolioExplorer: mockPortfolioExplorer,
       source: "mock",
       error: "VITE_COMMANDCORE_API_URL is not configured.",
     };
@@ -92,6 +108,8 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
       agentCentre: buildAgentCentre(agents),
       toolCentre: buildToolCentre(tools),
       conversationCentre: buildConversationCentre(conversations),
+      knowledgeCentre: buildKnowledgeCentre(knowledge),
+      portfolioExplorer: buildPortfolioExplorer(workspaces),
       source: "live",
       baseUrl: apiBaseUrl,
     };
@@ -102,6 +120,8 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
       agentCentre: mockAgentCentre,
       toolCentre: mockToolCentre,
       conversationCentre: mockConversationCentre,
+      knowledgeCentre: mockKnowledgeCentre,
+      portfolioExplorer: mockPortfolioExplorer,
       source: "mock",
       baseUrl: apiBaseUrl,
       error: error instanceof Error ? error.message : "Unable to load CommandCore API.",
@@ -661,6 +681,147 @@ function buildWorkspaceDashboard(data: JsonObject): PageData {
     ),
     activity: activitiesOf(arrayOf(data.recent_workspace_activity), "No recent workspace activity available."),
   };
+}
+
+function buildKnowledgeCentre(data: JsonObject): KnowledgeCentreData {
+  return {
+    assets: knowledgeAssetRecordsOf(arrayOf(data.knowledge_assets)),
+  };
+}
+
+function knowledgeAssetRecordsOf(items: unknown[]): KnowledgeAssetRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    const tags = arrayOf(object.tags).map((value) => stringOf(value, "")).filter(Boolean);
+    const citations = arrayOf(object.citations).map((value) => stringOf(value, "")).filter(Boolean);
+    const scopes = scopeBadgesOf(object);
+    return {
+      assetId: stringOf(object.asset_id, `asset-${index}`),
+      title: stringOf(object.title, "Untitled knowledge asset"),
+      assetType: stringOf(object.asset_type, "note"),
+      summary: knowledgeSummaryOf(object, tags, citations),
+      safeToQuery: booleanOf(object.safe_to_query),
+      relationshipCount: numberOf(object.relationship_count),
+      linkedAssetIds: arrayOf(object.linked_asset_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      tags,
+      citations,
+      scopes,
+    };
+  });
+}
+
+function scopeBadgesOf(object: JsonObject): ScopeBadgeRecord[] {
+  const scopes: ScopeBadgeRecord[] = [];
+  if (typeof object.workspace_id === "string") {
+    scopes.push({ kind: "workspace", value: object.workspace_id });
+  }
+  if (typeof object.company_id === "string") {
+    scopes.push({ kind: "company", value: object.company_id });
+  }
+  if (typeof object.project_id === "string") {
+    scopes.push({ kind: "project", value: object.project_id });
+  }
+  if (typeof object.source_record_id === "string" && object.source_record_id.startsWith("mission-")) {
+    scopes.push({ kind: "mission", value: object.source_record_id });
+  }
+  return scopes;
+}
+
+function knowledgeSummaryOf(object: JsonObject, tags: string[], citations: string[]): string {
+  if (typeof object.summary === "string" && object.summary.trim()) {
+    return object.summary;
+  }
+
+  const parts = [
+    stringOf(object.asset_type, "knowledge asset"),
+    typeof object.project_id === "string" ? `for ${object.project_id}` : undefined,
+    tags.length ? `tags: ${tags.slice(0, 3).join(", ")}` : undefined,
+    citations.length ? `${citations.length} citation${citations.length === 1 ? "" : "s"}` : undefined,
+  ].filter((value): value is string => Boolean(value));
+
+  return parts.join(" • ");
+}
+
+function buildPortfolioExplorer(data: JsonObject): PortfolioExplorerData {
+  return {
+    workspaces: workspaceRecordsOf(arrayOf(data.workspaces)),
+    companies: companyRecordsOf(arrayOf(data.companies)),
+    projects: projectRecordsOf(arrayOf(data.projects)),
+    capabilities: capabilityRecordsOf(arrayOf(data.capabilities)),
+  };
+}
+
+function workspaceRecordsOf(items: unknown[]): WorkspaceRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      workspaceId: stringOf(object.workspace_id, `workspace-${index}`),
+      name: stringOf(object.name, "Unnamed workspace"),
+      status: stringOf(object.status, "unknown"),
+      companyIds: arrayOf(object.company_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      projectIds: arrayOf(object.project_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      agentIds: arrayOf(object.agent_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      capabilityIds: arrayOf(object.capability_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      knowledgeBoundarySummary: typeof object.knowledge_boundary_summary === "string" ? object.knowledge_boundary_summary : undefined,
+      assetCount: numberOf(object.asset_count),
+      relationshipCount: numberOf(object.relationship_count),
+      localFirst: booleanOf(object.local_first),
+      offlineCapable: booleanOf(object.offline_capable),
+    };
+  });
+}
+
+function companyRecordsOf(items: unknown[]): CompanyRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      companyId: stringOf(object.company_id, `company-${index}`),
+      name: stringOf(object.name, "Unnamed company"),
+      mission: stringOf(object.mission, "Mission not provided."),
+      status: stringOf(object.status, "unknown"),
+      lifecycleState: stringOf(object.lifecycle_state, "unknown"),
+      projectIds: arrayOf(object.project_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      capabilityIds: arrayOf(object.capability_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      agentIds: arrayOf(object.agent_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      operatingState: typeof object.operating_state === "string" ? object.operating_state : undefined,
+    };
+  });
+}
+
+function projectRecordsOf(items: unknown[]): ProjectRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      projectId: stringOf(object.project_id, `project-${index}`),
+      name: stringOf(object.name, "Unnamed project"),
+      companyId: typeof object.company_id === "string" ? object.company_id : undefined,
+      status: stringOf(object.status, "unknown"),
+      lifecycleState: stringOf(object.lifecycle_state, "unknown"),
+      capabilityIds: arrayOf(object.capability_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      agentIds: arrayOf(object.agent_ids).map((value) => stringOf(value, "")).filter(Boolean),
+      mission: typeof object.mission === "string" ? object.mission : undefined,
+      outcome: typeof object.outcome === "string" ? object.outcome : undefined,
+      nextActionSummary: typeof object.next_action_summary === "string" ? object.next_action_summary : undefined,
+    };
+  });
+}
+
+function capabilityRecordsOf(items: unknown[]): CapabilityRecord[] {
+  return items.map((item, index) => {
+    const object = objectOf(item);
+    return {
+      capabilityId: stringOf(object.capability_id, `capability-${index}`),
+      name: stringOf(object.name, "Unnamed capability"),
+      description: stringOf(object.description, "No description available."),
+      status: stringOf(object.status, "unknown"),
+      lifecycleState: stringOf(object.lifecycle_state, "unknown"),
+      permissionLevel: stringOf(object.permission_level, "unknown"),
+      certificationStatus: stringOf(object.certification_status, "unknown"),
+      marketplaceReady: booleanOf(object.marketplace_ready),
+      consumerCount: numberOf(object.consumer_count),
+      providerCount: numberOf(object.provider_count),
+    };
+  });
 }
 
 function buildHealthDashboard(health: JsonObject, readiness: JsonObject): PageData {

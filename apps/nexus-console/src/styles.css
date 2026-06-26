@@ -1473,3 +1473,462 @@ button {
     flex-direction: column;
   }
 }
+
+.command-bar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.command-input-shell {
+  grid-column: 2 / 4;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.command-input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(129, 170, 221, 0.14);
+  background: rgba(8, 15, 28, 0.88);
+  color: #edf3ff;
+}
+
+.command-input::placeholder {
+  color: #7f9ac0;
+}
+
+.command-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.command-chip small {
+  color: #8ca6cc;
+  font-size: 0.8rem;
+}
+
+.command-chip.is-active {
+  border-color: rgba(77, 184, 255, 0.34);
+  background: rgba(15, 31, 53, 0.92);
+}
+
+.command-empty {
+  width: 100%;
+}
+
+.knowledge-centre-grid,
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.knowledge-assets-panel,
+.portfolio-company-panel {
+  grid-column: span 2;
+}
+
+.knowledge-search-placeholder,
+.portfolio-summary-band,
+.portfolio-focus-grid,
+.knowledge-summary-cards,
+.route-chip-row,
+.scope-badge-row,
+.portfolio-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.knowledge-search-placeholder {
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px dashed rgba(129, 170, 221, 0.18);
+  background: rgba(6, 13, 25, 0.3);
+}
+
+.knowledge-search-placeholder strong,
+.portfolio-metric-card span,
+.route-chip,
+.scope-badge strong,
+.linked-asset-chip,
+.knowledge-asset-id {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.knowledge-search-placeholder p,
+.knowledge-summary-card p,
+.knowledge-asset-row p,
+.knowledge-focus-card p,
+.portfolio-focus-card p,
+.portfolio-card-row p,
+.capability-row p {
+  margin: 0.45rem 0 0;
+  color: #a8bedc;
+  line-height: 1.5;
+}
+
+.knowledge-summary-cards,
+.portfolio-focus-grid {
+  margin-top: 1rem;
+}
+
+.knowledge-summary-card,
+.knowledge-focus-card,
+.portfolio-focus-card,
+.portfolio-metric-card {
+  flex: 1 1 220px;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(129, 170, 221, 0.1);
+  background: rgba(6, 13, 25, 0.42);
+}
+
+.knowledge-card-header,
+.knowledge-asset-row,
+.portfolio-card-row,
+.capability-row,
+.knowledge-search-placeholder {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.knowledge-card-meta,
+.knowledge-row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  color: #8ca6cc;
+  font-size: 0.85rem;
+}
+
+.knowledge-asset-list,
+.portfolio-card-list,
+.capability-list,
+.linked-asset-list,
+.knowledge-linked-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.knowledge-asset-row,
+.portfolio-card-row,
+.capability-row {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(129, 170, 221, 0.1);
+  background: rgba(6, 13, 25, 0.38);
+}
+
+.route-chip,
+.linked-asset-chip,
+.scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(129, 170, 221, 0.14);
+  background: rgba(12, 19, 34, 0.78);
+  color: #dbe7fb;
+}
+
+.route-chip {
+  cursor: pointer;
+}
+
+.scope-badge {
+  font-size: 0.75rem;
+}
+
+.scope-badge strong {
+  color: #8bd0ff;
+  font-size: 0.68rem;
+}
+
+.scope-company strong {
+  color: #94f7c5;
+}
+
+.scope-project strong {
+  color: #ffc979;
+}
+
+.scope-mission strong {
+  color: #d0c1ff;
+}
+
+.portfolio-metric-card strong {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 1.65rem;
+}
+
+.portfolio-tag-row,
+.knowledge-card-meta {
+  margin-top: 0.8rem;
+}
+
+.portfolio-tag-row span,
+.knowledge-card-meta span,
+.knowledge-asset-id,
+.linked-asset-chip {
+  color: #8ca6cc;
+  font-size: 0.8rem;
+}
+
+.compact-empty {
+  padding: 0.9rem;
+}
+
+@media (max-width: 1180px) {
+  .knowledge-centre-grid,
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-assets-panel,
+  .portfolio-company-panel {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 960px) {
+  .command-input-shell {
+    grid-column: 1 / -1;
+  }
+
+  .command-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .command-bar-shortcut {
+    justify-self: end;
+  }
+
+  .command-suggestions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .command-input-shell,
+  .knowledge-card-header,
+  .knowledge-asset-row,
+  .portfolio-card-row,
+  .capability-row,
+  .knowledge-search-placeholder {
+    flex-direction: column;
+  }
+
+  .knowledge-row-meta,
+  .knowledge-card-meta {
+    align-items: flex-start;
+  }
+}
+
+.executive-home-shell {
+  gap: 1rem;
+}
+
+.executive-system-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.executive-os-grid,
+.executive-cross-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.executive-system-board,
+.executive-runtime-board,
+.executive-link-card,
+.attention-centre-panel,
+.operational-timeline-panel,
+.command-results-panel {
+  padding: 1.2rem;
+}
+
+.executive-status-grid,
+.executive-runtime-cards,
+.attention-group-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.executive-status-card,
+.executive-runtime-card,
+.attention-group-card,
+.command-result-row,
+.attention-route-card {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(129, 170, 221, 0.1);
+  background: rgba(6, 13, 25, 0.4);
+}
+
+.executive-runtime-card,
+.command-result-row,
+.attention-route-card {
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.executive-status-card p,
+.executive-runtime-card p,
+.executive-link-body p,
+.command-result-row p,
+.timeline-feed-body p {
+  margin: 0.45rem 0 0;
+  color: #a8bedc;
+  line-height: 1.5;
+}
+
+.executive-runtime-card:hover,
+.command-result-row:hover,
+.attention-route-card:hover {
+  border-color: rgba(77, 184, 255, 0.28);
+  background: rgba(10, 20, 36, 0.64);
+}
+
+.executive-link-body,
+.command-results-list,
+.attention-group-list,
+.timeline-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.attention-group-header,
+.timeline-feed-header,
+.timeline-feed-footer,
+.command-results-panel .panel-title-stack {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.timeline-feed-item {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
+.timeline-feed-body {
+  min-width: 0;
+  padding: 0.95rem 0 0.95rem 0;
+  border-top: 1px solid rgba(129, 170, 221, 0.08);
+}
+
+.timeline-feed-item:first-child .timeline-feed-body {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.timeline-feed-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  color: #8ca6cc;
+  font-size: 0.82rem;
+}
+
+.timeline-feed-footer {
+  margin-top: 0.7rem;
+  align-items: center;
+}
+
+.attention-route-card {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.route-chip-button {
+  cursor: pointer;
+}
+
+.mission-route-row {
+  margin-top: 0.8rem;
+}
+
+.command-results-panel {
+  grid-column: 1 / -1;
+}
+
+.command-results-list {
+  margin-top: 0.9rem;
+}
+
+.command-result-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.linked-knowledge-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+@media (max-width: 1280px) {
+  .executive-system-metrics,
+  .executive-status-grid,
+  .executive-runtime-cards,
+  .attention-group-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .executive-os-grid,
+  .executive-cross-nav-grid,
+  .executive-system-metrics,
+  .executive-status-grid,
+  .executive-runtime-cards,
+  .attention-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-feed-header,
+  .timeline-feed-footer,
+  .attention-group-header,
+  .command-result-row {
+    flex-direction: column;
+  }
+
+  .timeline-feed-meta {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .attention-route-card,
+  .linked-knowledge-row {
+    grid-template-columns: 1fr;
+  }
+}

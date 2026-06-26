@@ -10,16 +10,17 @@ import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmen
 import { PageHeader } from "../components/PageHeader";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
-import type { AgentCentreData, PageData } from "../data/mockKernel";
+import type { AgentCentreData, NavPage, PageData } from "../data/mockKernel";
 
 type AgentDashboardProps = {
   page: PageData;
   agentCentre: AgentCentreData;
   source: DataSource;
   sourceMessage?: string;
+  onNavigate: (page: NavPage) => void;
 };
 
-export function AgentDashboard({ page, agentCentre, source, sourceMessage }: AgentDashboardProps) {
+export function AgentDashboard({ page, agentCentre, source, sourceMessage, onNavigate }: AgentDashboardProps) {
   const failedAgentIds = new Set(agentCentre.executions.failed.map((execution) => execution.agentId));
   const activeAgents = agentCentre.profiles.filter((agent) => agent.runtimeStatus === "busy");
   const idleAgents = agentCentre.profiles.filter((agent) => agent.runtimeStatus === "available");
@@ -44,7 +45,7 @@ export function AgentDashboard({ page, agentCentre, source, sourceMessage }: Age
 
       <AgentStatusSections active={activeAgents} idle={idleAgents} failed={failedAgents} />
 
-      <AgentProfilePanel profiles={agentCentre.profiles} />
+      <AgentProfilePanel profiles={agentCentre.profiles} onNavigate={onNavigate} />
 
       <section className="mission-support-grid">
         <AgentAssignmentHistoryPanel assignments={agentCentre.assignments} />

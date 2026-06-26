@@ -10,6 +10,12 @@ import {
   pageMap,
   type NavPage,
 } from "./data/mockKernel";
+import {
+  mockKnowledgeCentre,
+  mockPortfolioExplorer,
+  type SearchEntry,
+} from "./data/nexusCentres";
+import type { StatusTone } from "./data/mockKernel";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
@@ -27,6 +33,8 @@ const initialData: ConsoleDataResult = {
   agentCentre: mockAgentCentre,
   toolCentre: mockToolCentre,
   conversationCentre: mockConversationCentre,
+  knowledgeCentre: mockKnowledgeCentre,
+  portfolioExplorer: mockPortfolioExplorer,
   source: "mock",
   error: "Loading console data...",
 };
@@ -55,6 +63,8 @@ export default function App() {
     ? `Connected to ${consoleData.baseUrl}`
     : consoleData.error ?? "Using built-in mock kernel data.";
 
+  const searchEntries = useMemo(() => buildSearchEntries(consoleData), [consoleData]);
+
   const renderedPage = useMemo(() => {
     const props = {
       page: currentPage,
@@ -64,34 +74,74 @@ export default function App() {
 
     switch (activePage) {
       case "kernel":
-        return <ExecutiveHome {...props} pages={consoleData.pages} />;
+        return (
+          <ExecutiveHome
+            {...props}
+            pages={consoleData.pages}
+            missionCentre={consoleData.missionCentre}
+            agentCentre={consoleData.agentCentre}
+            toolCentre={consoleData.toolCentre}
+            conversationCentre={consoleData.conversationCentre}
+            knowledgeCentre={consoleData.knowledgeCentre}
+            portfolioExplorer={consoleData.portfolioExplorer}
+            onNavigate={setActivePage}
+          />
+        );
       case "executive":
         return <ExecutiveDashboard {...props} />;
       case "missions":
-        return <MissionDashboard {...props} missionCentre={consoleData.missionCentre} />;
+        return (
+          <MissionDashboard
+            {...props}
+            missionCentre={consoleData.missionCentre}
+            conversationCentre={consoleData.conversationCentre}
+            knowledgeCentre={consoleData.knowledgeCentre}
+            onNavigate={setActivePage}
+          />
+        );
       case "agents":
-        return <AgentDashboard {...props} agentCentre={consoleData.agentCentre} />;
+        return <AgentDashboard {...props} agentCentre={consoleData.agentCentre} onNavigate={setActivePage} />;
       case "tools":
-        return <ToolDashboard {...props} toolCentre={consoleData.toolCentre} />;
+        return <ToolDashboard {...props} toolCentre={consoleData.toolCentre} onNavigate={setActivePage} />;
       case "conversations":
-        return <ConversationDashboard {...props} conversationCentre={consoleData.conversationCentre} />;
+        return (
+          <ConversationDashboard
+            {...props}
+            conversationCentre={consoleData.conversationCentre}
+            onNavigate={setActivePage}
+          />
+        );
       case "knowledge":
-        return <KnowledgeDashboard {...props} />;
+        return <KnowledgeDashboard {...props} knowledgeCentre={consoleData.knowledgeCentre} onNavigate={setActivePage} />;
       case "workspaces":
-        return <WorkspacesDashboard {...props} />;
+        return <WorkspacesDashboard {...props} portfolioExplorer={consoleData.portfolioExplorer} onNavigate={setActivePage} />;
       case "health":
         return <HealthReadiness {...props} />;
       case "settings":
         return <SettingsPlaceholder {...props} />;
       default:
-        return <ExecutiveHome {...props} pages={consoleData.pages} />;
+        return (
+          <ExecutiveHome
+            {...props}
+            pages={consoleData.pages}
+            missionCentre={consoleData.missionCentre}
+            agentCentre={consoleData.agentCentre}
+            toolCentre={consoleData.toolCentre}
+            conversationCentre={consoleData.conversationCentre}
+            knowledgeCentre={consoleData.knowledgeCentre}
+            portfolioExplorer={consoleData.portfolioExplorer}
+            onNavigate={setActivePage}
+          />
+        );
     }
   }, [
     activePage,
     consoleData.agentCentre,
     consoleData.conversationCentre,
+    consoleData.knowledgeCentre,
     consoleData.missionCentre,
     consoleData.pages,
+    consoleData.portfolioExplorer,
     consoleData.source,
     consoleData.toolCentre,
     currentPage,
@@ -102,9 +152,127 @@ export default function App() {
     <div className="app-frame">
       <Sidebar activePage={activePage} onSelect={setActivePage} />
       <main className="console-main">
-        <CommandBar />
+        <CommandBar
+          activePage={activePage}
+          onNavigate={setActivePage}
+          searchEntries={searchEntries}
+        />
         {renderedPage}
       </main>
     </div>
   );
+}
+
+function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
+  const pageEntries = Object.entries(data.pages).map(([page, details]) => ({
+    id: `page-${page}`,
+    label: details.title,
+    description: details.description,
+    page: page as NavPage,
+    keywords: [details.eyebrow, details.status.label, ...details.metrics.map((metric) => String(metric.label))],
+    context: details.eyebrow,
+    tone: details.status.tone,
+  }));
+
+  const missionEntries = [
+    ...data.missionCentre.active,
+    ...data.missionCentre.completed,
+    ...data.missionCentre.failed,
+  ].map((mission) => ({
+    id: `mission-${mission.missionId}`,
+    label: mission.title,
+    description: mission.resultSummary ?? mission.failureReason ?? mission.scope.join(" • ") ?? mission.status,
+    page: "missions" as NavPage,
+    keywords: [mission.missionId, mission.status, ...mission.capabilityIds, ...mission.scope],
+    context: mission.missionId,
+    tone: undefined,
+  }));
+
+  const agentEntries = data.agentCentre.profiles.map((agent) => ({
+    id: `agent-${agent.agentId}`,
+    label: agent.name,
+    description: agent.stateSummary ?? `${agent.role} / ${agent.runtimeStatus}`,
+    page: "agents" as NavPage,
+    keywords: [agent.agentId, agent.role, agent.runtimeStatus, ...agent.capabilityIds, ...agent.missionQueue],
+    context: agent.agentId,
+    tone: undefined,
+  }));
+
+  const toolEntries = data.toolCentre.tools.map((tool) => ({
+    id: `tool-${tool.toolId}`,
+    label: tool.name,
+    description: tool.description,
+    page: "tools" as NavPage,
+    keywords: [tool.toolId, tool.permissionLevel, tool.status, tool.agentId ?? "", tool.capabilityId ?? ""],
+    context: tool.toolId,
+    tone: undefined,
+  }));
+
+  const conversationEntries = data.conversationCentre.conversations.map((conversation) => ({
+    id: `conversation-${conversation.conversationId}`,
+    label: conversation.conversationId,
+    description: conversation.missionId ?? conversation.projectId ?? conversation.workspaceId ?? "Conversation record",
+    page: "conversations" as NavPage,
+    keywords: [
+      conversation.conversationId,
+      conversation.missionId ?? "",
+      conversation.projectId ?? "",
+      conversation.workspaceId ?? "",
+      ...conversation.participantIds,
+    ],
+    context: `${conversation.participantIds.length} participants`,
+    tone: undefined,
+  }));
+
+  const knowledgeEntries = data.knowledgeCentre.assets.map((asset) => ({
+    id: `knowledge-${asset.assetId}`,
+    label: asset.title,
+    description: asset.summary,
+    page: "knowledge" as NavPage,
+    keywords: [asset.assetId, asset.assetType, ...asset.tags, ...asset.scopes.map((scope) => scope.value)],
+    context: asset.assetId,
+    tone: (asset.safeToQuery ? "ready" : "warning") as StatusTone,
+  }));
+
+  const workspaceEntries = data.portfolioExplorer.workspaces.map((workspace) => ({
+    id: `workspace-${workspace.workspaceId}`,
+    label: workspace.name,
+    description: workspace.knowledgeBoundarySummary ?? `${workspace.assetCount} assets / ${workspace.relationshipCount} relationships`,
+    page: "workspaces" as NavPage,
+    keywords: [workspace.workspaceId, workspace.status, ...workspace.projectIds, ...workspace.companyIds, ...workspace.capabilityIds],
+    context: workspace.workspaceId,
+    tone: undefined,
+  }));
+
+  const companyEntries = data.portfolioExplorer.companies.map((company) => ({
+    id: `company-${company.companyId}`,
+    label: company.name,
+    description: company.mission,
+    page: "workspaces" as NavPage,
+    keywords: [company.companyId, company.status, ...company.projectIds, ...company.capabilityIds],
+    context: company.companyId,
+    tone: undefined,
+  }));
+
+  const projectEntries = data.portfolioExplorer.projects.map((project) => ({
+    id: `project-${project.projectId}`,
+    label: project.name,
+    description: project.nextActionSummary ?? project.mission ?? "Project record",
+    page: "workspaces" as NavPage,
+    keywords: [project.projectId, project.status, ...project.capabilityIds, ...project.agentIds],
+    context: project.projectId,
+    tone: undefined,
+  }));
+
+  return [
+    ...pageEntries,
+    ...missionEntries,
+    ...agentEntries,
+    ...toolEntries,
+    ...conversationEntries,
+    ...knowledgeEntries,
+    ...workspaceEntries,
+    ...companyEntries,
+    ...projectEntries,
+  ];
 }

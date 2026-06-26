@@ -10,16 +10,17 @@ import { MetricCard } from "../components/MetricCard";
 import { PageHeader } from "../components/PageHeader";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
-import type { ConversationCentreData, PageData } from "../data/mockKernel";
+import type { ConversationCentreData, NavPage, PageData } from "../data/mockKernel";
 
 type ConversationDashboardProps = {
   page: PageData;
   conversationCentre: ConversationCentreData;
   source: DataSource;
   sourceMessage?: string;
+  onNavigate: (page: NavPage) => void;
 };
 
-export function ConversationDashboard({ page, conversationCentre, source, sourceMessage }: ConversationDashboardProps) {
+export function ConversationDashboard({ page, conversationCentre, source, sourceMessage, onNavigate }: ConversationDashboardProps) {
   return (
     <div className="page-shell">
       <PageHeader page={page} />
@@ -40,11 +41,12 @@ export function ConversationDashboard({ page, conversationCentre, source, source
       <ConversationThreadListPanel
         conversations={conversationCentre.conversations}
         threads={conversationCentre.threads}
+        onNavigate={onNavigate}
       />
 
       <section className="mission-support-grid">
         <MessagePreviewPanel messages={conversationCentre.messages} />
-        <ConversationKnowledgePanel knowledgeLinks={conversationCentre.knowledgeLinks} />
+        <ConversationKnowledgePanel knowledgeLinks={conversationCentre.knowledgeLinks} onNavigate={onNavigate} />
       </section>
 
       <ConversationContextPanel

@@ -1,11 +1,12 @@
-import { agentRuntimeTone, type AgentProfile } from "../data/mockKernel";
+import { agentRuntimeTone, type AgentProfile, type NavPage } from "../data/mockKernel";
 import { StatusBadge } from "./StatusBadge";
 
 type AgentProfilePanelProps = {
   profiles: AgentProfile[];
+  onNavigate: (page: NavPage) => void;
 };
 
-export function AgentProfilePanel({ profiles }: AgentProfilePanelProps) {
+export function AgentProfilePanel({ profiles, onNavigate }: AgentProfilePanelProps) {
   return (
     <section className="panel surface agent-profile-panel">
       <div className="panel-header">
@@ -31,12 +32,24 @@ export function AgentProfilePanel({ profiles }: AgentProfilePanelProps) {
                   </span>
                 ))}
                 {agent.missionQueue.map((missionId) => (
-                  <span key={missionId} className="mission-chip mission-chip-muted">
+                  <button
+                    key={missionId}
+                    type="button"
+                    className="mission-chip mission-chip-muted route-chip-button"
+                    onClick={() => onNavigate("missions")}
+                  >
                     {missionId}
-                  </span>
+                  </button>
                 ))}
               </div>
               {agent.stateSummary ? <p className="agent-profile-summary">{agent.stateSummary}</p> : null}
+              {agent.missionQueue.length ? (
+                <div className="route-chip-row mission-route-row">
+                  <button type="button" className="route-chip" onClick={() => onNavigate("missions")}>
+                    Agent → Missions
+                  </button>
+                </div>
+              ) : null}
             </article>
           ))}
         </div>
