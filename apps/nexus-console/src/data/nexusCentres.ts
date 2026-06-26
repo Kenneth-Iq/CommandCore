@@ -98,6 +98,16 @@ export type SearchEntry = {
   label: string;
   description: string;
   page: NavPage;
+  selection: {
+    missionId?: string;
+    agentId?: string;
+    toolId?: string;
+    conversationId?: string;
+    assetId?: string;
+    workspaceId?: string;
+    companyId?: string;
+    projectId?: string;
+  };
   keywords: string[];
   context?: string;
   tone?: StatusTone;

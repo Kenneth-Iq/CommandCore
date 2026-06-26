@@ -1,5 +1,6 @@
 import type { NavPage } from "../data/mockKernel";
-import type { PortfolioExplorerData } from "../data/nexusCentres";
+import type { KnowledgeCentreData, PortfolioExplorerData } from "../data/nexusCentres";
+import type { RouteSelection } from "../routing";
 import { StatusBadge } from "./StatusBadge";
 
 const routeMap: Array<{ label: string; page: NavPage }> = [
@@ -11,12 +12,23 @@ const routeMap: Array<{ label: string; page: NavPage }> = [
 
 type PortfolioExplorerProps = {
   portfolioExplorer: PortfolioExplorerData;
-  onNavigate: (page: NavPage) => void;
+  knowledgeCentre: KnowledgeCentreData;
+  selectedWorkspaceId?: string;
+  selectedCompanyId?: string;
+  selectedProjectId?: string;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
-export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioExplorerProps) {
-  const leadWorkspace = portfolioExplorer.workspaces[0];
-  const leadCompany = portfolioExplorer.companies[0];
+export function PortfolioExplorer({
+  portfolioExplorer,
+  knowledgeCentre,
+  selectedWorkspaceId,
+  selectedCompanyId,
+  selectedProjectId,
+  onNavigate,
+}: PortfolioExplorerProps) {
+  const leadWorkspace = portfolioExplorer.workspaces.find((workspace) => workspace.workspaceId === selectedWorkspaceId) ?? portfolioExplorer.workspaces[0];
+  const leadCompany = portfolioExplorer.companies.find((company) => company.companyId === selectedCompanyId) ?? portfolioExplorer.companies[0];
 
   return (
     <section className="portfolio-grid">
@@ -46,7 +58,7 @@ export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioEx
         {leadWorkspace || leadCompany ? (
           <div className="portfolio-focus-grid">
             {leadWorkspace ? (
-              <article className="portfolio-focus-card">
+              <button type="button" className={`portfolio-focus-card selectable-card ${selectedWorkspaceId === leadWorkspace.workspaceId ? "is-selected" : ""}`} onClick={() => onNavigate("workspaces", { workspaceId: leadWorkspace.workspaceId })}>
                 <div className="knowledge-card-header">
                   <strong>{leadWorkspace.name}</strong>
                   <StatusBadge tone="active">{leadWorkspace.status}</StatusBadge>
@@ -58,17 +70,17 @@ export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioEx
                   <span>{leadWorkspace.capabilityIds.length} capabilities</span>
                 </div>
                 <div className="route-chip-row mission-route-row">
-                  <button type="button" className="route-chip" onClick={() => onNavigate("missions")}>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("missions"); }}>
                     Workspace → Missions
                   </button>
-                  <button type="button" className="route-chip" onClick={() => onNavigate("knowledge")}>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("knowledge", workspaceKnowledgeSelection(knowledgeCentre, leadWorkspace.workspaceId)); }}>
                     Workspace → Assets
                   </button>
                 </div>
-              </article>
+              </button>
             ) : null}
             {leadCompany ? (
-              <article className="portfolio-focus-card">
+              <button type="button" className={`portfolio-focus-card selectable-card ${selectedCompanyId === leadCompany.companyId ? "is-selected" : ""}`} onClick={() => onNavigate("workspaces", { companyId: leadCompany.companyId })}>
                 <div className="knowledge-card-header">
                   <strong>{leadCompany.name}</strong>
                   <StatusBadge tone="ready">{leadCompany.lifecycleState}</StatusBadge>
@@ -80,14 +92,14 @@ export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioEx
                   <span>{leadCompany.capabilityIds.length} capabilities</span>
                 </div>
                 <div className="route-chip-row mission-route-row">
-                  <button type="button" className="route-chip" onClick={() => onNavigate("missions")}>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("missions"); }}>
                     Company → Missions
                   </button>
-                  <button type="button" className="route-chip" onClick={() => onNavigate("knowledge")}>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("knowledge", companyKnowledgeSelection(knowledgeCentre, leadCompany.companyId)); }}>
                     Company → Assets
                   </button>
                 </div>
-              </article>
+              </button>
             ) : null}
           </div>
         ) : (
@@ -106,7 +118,7 @@ export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioEx
         {portfolioExplorer.companies.length || portfolioExplorer.projects.length ? (
           <div className="portfolio-card-list">
             {portfolioExplorer.companies.map((company) => (
-              <article key={company.companyId} className="portfolio-card-row">
+              <button key={company.companyId} type="button" className={`portfolio-card-row selectable-card ${selectedCompanyId === company.companyId ? "is-selected" : ""}`} onClick={() => onNavigate("workspaces", { companyId: company.companyId })}>
                 <div>
                   <div className="knowledge-card-header">
                     <strong>{company.name}</strong>
@@ -120,14 +132,14 @@ export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioEx
                   </div>
                 </div>
                 <div className="route-chip-row">
-                  <button type="button" className="route-chip" onClick={() => onNavigate("missions")}>Open Missions</button>
-                  <button type="button" className="route-chip" onClick={() => onNavigate("agents")}>Open Agents</button>
-                  <button type="button" className="route-chip" onClick={() => onNavigate("knowledge")}>Open Assets</button>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("missions"); }}>Open Missions</button>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("agents"); }}>Open Agents</button>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("knowledge", companyKnowledgeSelection(knowledgeCentre, company.companyId)); }}>Open Assets</button>
                 </div>
-              </article>
+              </button>
             ))}
             {portfolioExplorer.projects.map((project) => (
-              <article key={project.projectId} className="portfolio-card-row">
+              <button key={project.projectId} type="button" className={`portfolio-card-row selectable-card ${selectedProjectId === project.projectId ? "is-selected" : ""}`} onClick={() => onNavigate("workspaces", { projectId: project.projectId })}>
                 <div>
                   <div className="knowledge-card-header">
                     <strong>{project.name}</strong>
@@ -141,11 +153,11 @@ export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioEx
                   </div>
                 </div>
                 <div className="route-chip-row">
-                  <button type="button" className="route-chip" onClick={() => onNavigate("missions")}>Project → Missions</button>
-                  <button type="button" className="route-chip" onClick={() => onNavigate("tools")}>Project → Tools</button>
-                  <button type="button" className="route-chip" onClick={() => onNavigate("knowledge")}>Project → Assets</button>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("missions"); }}>Project → Missions</button>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("tools"); }}>Project → Tools</button>
+                  <button type="button" className="route-chip" onClick={(event) => { event.stopPropagation(); onNavigate("knowledge", projectKnowledgeSelection(knowledgeCentre, project.projectId)); }}>Project → Assets</button>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         ) : (
@@ -202,4 +214,19 @@ export function PortfolioExplorer({ portfolioExplorer, onNavigate }: PortfolioEx
       </article>
     </section>
   );
+}
+
+function workspaceKnowledgeSelection(knowledgeCentre: KnowledgeCentreData, workspaceId: string): RouteSelection {
+  const asset = knowledgeCentre.assets.find((candidate) => candidate.scopes.some((scope) => scope.kind === "workspace" && scope.value === workspaceId));
+  return asset ? { assetId: asset.assetId } : {};
+}
+
+function companyKnowledgeSelection(knowledgeCentre: KnowledgeCentreData, companyId: string): RouteSelection {
+  const asset = knowledgeCentre.assets.find((candidate) => candidate.scopes.some((scope) => scope.kind === "company" && scope.value === companyId));
+  return asset ? { assetId: asset.assetId } : {};
+}
+
+function projectKnowledgeSelection(knowledgeCentre: KnowledgeCentreData, projectId: string): RouteSelection {
+  const asset = knowledgeCentre.assets.find((candidate) => candidate.scopes.some((scope) => scope.kind === "project" && scope.value === projectId));
+  return asset ? { assetId: asset.assetId } : {};
 }

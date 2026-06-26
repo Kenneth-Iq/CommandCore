@@ -9,13 +9,13 @@ import {
   mockToolCentre,
   pageMap,
   type NavPage,
+  type StatusTone,
 } from "./data/mockKernel";
 import {
   mockKnowledgeCentre,
   mockPortfolioExplorer,
   type SearchEntry,
 } from "./data/nexusCentres";
-import type { StatusTone } from "./data/mockKernel";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
@@ -26,6 +26,12 @@ import { MissionDashboard } from "./pages/MissionDashboard";
 import { SettingsPlaceholder } from "./pages/SettingsPlaceholder";
 import { ToolDashboard } from "./pages/ToolDashboard";
 import { WorkspacesDashboard } from "./pages/WorkspacesDashboard";
+import {
+  navigateTo,
+  routeFromLocation,
+  type NexusRoute,
+  type RouteSelection,
+} from "./routing";
 
 const initialData: ConsoleDataResult = {
   pages: pageMap,
@@ -40,7 +46,7 @@ const initialData: ConsoleDataResult = {
 };
 
 export default function App() {
-  const [activePage, setActivePage] = useState<NavPage>("kernel");
+  const [route, setRoute] = useState<NexusRoute>(() => routeFromLocation(window.location));
   const [consoleData, setConsoleData] = useState<ConsoleDataResult>(initialData);
 
   useEffect(() => {
@@ -58,12 +64,23 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const handlePopState = () => setRoute(routeFromLocation(window.location));
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const activePage = route.page;
   const currentPage = consoleData.pages[activePage];
   const sourceMessage = consoleData.source === "live"
     ? `Connected to ${consoleData.baseUrl}`
     : consoleData.error ?? "Using built-in mock kernel data.";
 
   const searchEntries = useMemo(() => buildSearchEntries(consoleData), [consoleData]);
+
+  function handleNavigate(page: NavPage, selection: RouteSelection = {}) {
+    navigateTo(page, selection);
+  }
 
   const renderedPage = useMemo(() => {
     const props = {
@@ -84,7 +101,7 @@ export default function App() {
             conversationCentre={consoleData.conversationCentre}
             knowledgeCentre={consoleData.knowledgeCentre}
             portfolioExplorer={consoleData.portfolioExplorer}
-            onNavigate={setActivePage}
+            onNavigate={handleNavigate}
           />
         );
       case "executive":
@@ -96,25 +113,56 @@ export default function App() {
             missionCentre={consoleData.missionCentre}
             conversationCentre={consoleData.conversationCentre}
             knowledgeCentre={consoleData.knowledgeCentre}
-            onNavigate={setActivePage}
+            selection={route.selection}
+            onNavigate={handleNavigate}
           />
         );
       case "agents":
-        return <AgentDashboard {...props} agentCentre={consoleData.agentCentre} onNavigate={setActivePage} />;
+        return (
+          <AgentDashboard
+            {...props}
+            agentCentre={consoleData.agentCentre}
+            selection={route.selection}
+            onNavigate={handleNavigate}
+          />
+        );
       case "tools":
-        return <ToolDashboard {...props} toolCentre={consoleData.toolCentre} onNavigate={setActivePage} />;
+        return (
+          <ToolDashboard
+            {...props}
+            toolCentre={consoleData.toolCentre}
+            selection={route.selection}
+            onNavigate={handleNavigate}
+          />
+        );
       case "conversations":
         return (
           <ConversationDashboard
             {...props}
             conversationCentre={consoleData.conversationCentre}
-            onNavigate={setActivePage}
+            selection={route.selection}
+            onNavigate={handleNavigate}
           />
         );
       case "knowledge":
-        return <KnowledgeDashboard {...props} knowledgeCentre={consoleData.knowledgeCentre} onNavigate={setActivePage} />;
+        return (
+          <KnowledgeDashboard
+            {...props}
+            knowledgeCentre={consoleData.knowledgeCentre}
+            selection={route.selection}
+            onNavigate={handleNavigate}
+          />
+        );
       case "workspaces":
-        return <WorkspacesDashboard {...props} portfolioExplorer={consoleData.portfolioExplorer} onNavigate={setActivePage} />;
+        return (
+          <WorkspacesDashboard
+            {...props}
+            portfolioExplorer={consoleData.portfolioExplorer}
+            knowledgeCentre={consoleData.knowledgeCentre}
+            selection={route.selection}
+            onNavigate={handleNavigate}
+          />
+        );
       case "health":
         return <HealthReadiness {...props} />;
       case "settings":
@@ -130,31 +178,25 @@ export default function App() {
             conversationCentre={consoleData.conversationCentre}
             knowledgeCentre={consoleData.knowledgeCentre}
             portfolioExplorer={consoleData.portfolioExplorer}
-            onNavigate={setActivePage}
+            onNavigate={handleNavigate}
           />
         );
     }
   }, [
     activePage,
-    consoleData.agentCentre,
-    consoleData.conversationCentre,
-    consoleData.knowledgeCentre,
-    consoleData.missionCentre,
-    consoleData.pages,
-    consoleData.portfolioExplorer,
-    consoleData.source,
-    consoleData.toolCentre,
+    consoleData,
     currentPage,
+    route.selection,
     sourceMessage,
   ]);
 
   return (
     <div className="app-frame">
-      <Sidebar activePage={activePage} onSelect={setActivePage} />
+      <Sidebar activePage={activePage} onSelect={(page) => handleNavigate(page)} />
       <main className="console-main">
         <CommandBar
           activePage={activePage}
-          onNavigate={setActivePage}
+          onNavigate={handleNavigate}
           searchEntries={searchEntries}
         />
         {renderedPage}
@@ -169,6 +211,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: details.title,
     description: details.description,
     page: page as NavPage,
+    selection: {},
     keywords: [details.eyebrow, details.status.label, ...details.metrics.map((metric) => String(metric.label))],
     context: details.eyebrow,
     tone: details.status.tone,
@@ -183,6 +226,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: mission.title,
     description: mission.resultSummary ?? mission.failureReason ?? mission.scope.join(" • ") ?? mission.status,
     page: "missions" as NavPage,
+    selection: { missionId: mission.missionId },
     keywords: [mission.missionId, mission.status, ...mission.capabilityIds, ...mission.scope],
     context: mission.missionId,
     tone: undefined,
@@ -193,6 +237,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: agent.name,
     description: agent.stateSummary ?? `${agent.role} / ${agent.runtimeStatus}`,
     page: "agents" as NavPage,
+    selection: { agentId: agent.agentId },
     keywords: [agent.agentId, agent.role, agent.runtimeStatus, ...agent.capabilityIds, ...agent.missionQueue],
     context: agent.agentId,
     tone: undefined,
@@ -203,6 +248,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: tool.name,
     description: tool.description,
     page: "tools" as NavPage,
+    selection: { toolId: tool.toolId },
     keywords: [tool.toolId, tool.permissionLevel, tool.status, tool.agentId ?? "", tool.capabilityId ?? ""],
     context: tool.toolId,
     tone: undefined,
@@ -213,6 +259,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: conversation.conversationId,
     description: conversation.missionId ?? conversation.projectId ?? conversation.workspaceId ?? "Conversation record",
     page: "conversations" as NavPage,
+    selection: { conversationId: conversation.conversationId },
     keywords: [
       conversation.conversationId,
       conversation.missionId ?? "",
@@ -229,6 +276,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: asset.title,
     description: asset.summary,
     page: "knowledge" as NavPage,
+    selection: { assetId: asset.assetId },
     keywords: [asset.assetId, asset.assetType, ...asset.tags, ...asset.scopes.map((scope) => scope.value)],
     context: asset.assetId,
     tone: (asset.safeToQuery ? "ready" : "warning") as StatusTone,
@@ -239,6 +287,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: workspace.name,
     description: workspace.knowledgeBoundarySummary ?? `${workspace.assetCount} assets / ${workspace.relationshipCount} relationships`,
     page: "workspaces" as NavPage,
+    selection: { workspaceId: workspace.workspaceId },
     keywords: [workspace.workspaceId, workspace.status, ...workspace.projectIds, ...workspace.companyIds, ...workspace.capabilityIds],
     context: workspace.workspaceId,
     tone: undefined,
@@ -249,6 +298,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: company.name,
     description: company.mission,
     page: "workspaces" as NavPage,
+    selection: { companyId: company.companyId },
     keywords: [company.companyId, company.status, ...company.projectIds, ...company.capabilityIds],
     context: company.companyId,
     tone: undefined,
@@ -259,6 +309,7 @@ function buildSearchEntries(data: ConsoleDataResult): SearchEntry[] {
     label: project.name,
     description: project.nextActionSummary ?? project.mission ?? "Project record",
     page: "workspaces" as NavPage,
+    selection: { projectId: project.projectId },
     keywords: [project.projectId, project.status, ...project.capabilityIds, ...project.agentIds],
     context: project.projectId,
     tone: undefined,

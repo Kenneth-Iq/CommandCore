@@ -8,34 +8,70 @@ import { InfoPanel } from "../components/InfoPanel";
 import { MetricCard } from "../components/MetricCard";
 import { MissionAgentAssignmentPanel } from "../components/MissionAgentAssignmentPanel";
 import { PageHeader } from "../components/PageHeader";
+import { RecordDetailPanel } from "../components/RecordDetailPanel";
+import { SelectedContextBar } from "../components/SelectedContextBar";
 import { SourceStrip } from "../components/SourceStrip";
 import type { DataSource } from "../api/commandcoreApi";
-import type { AgentCentreData, NavPage, PageData } from "../data/mockKernel";
+import { agentRuntimeTone, type AgentCentreData, type NavPage, type PageData } from "../data/mockKernel";
+import type { RouteSelection } from "../routing";
 
 type AgentDashboardProps = {
   page: PageData;
   agentCentre: AgentCentreData;
+  selection: RouteSelection;
   source: DataSource;
   sourceMessage?: string;
-  onNavigate: (page: NavPage) => void;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
-export function AgentDashboard({ page, agentCentre, source, sourceMessage, onNavigate }: AgentDashboardProps) {
+export function AgentDashboard({ page, agentCentre, selection, source, sourceMessage, onNavigate }: AgentDashboardProps) {
   const failedAgentIds = new Set(agentCentre.executions.failed.map((execution) => execution.agentId));
   const activeAgents = agentCentre.profiles.filter((agent) => agent.runtimeStatus === "busy");
   const idleAgents = agentCentre.profiles.filter((agent) => agent.runtimeStatus === "available");
   const failedAgents = agentCentre.profiles.filter((agent) => failedAgentIds.has(agent.agentId));
+  const selectedAgent = selection.agentId
+    ? agentCentre.profiles.find((agent) => agent.agentId === selection.agentId)
+    : undefined;
+  const selectedAssignment = selectedAgent
+    ? agentCentre.assignments.find((assignment) => assignment.agentId === selectedAgent.agentId)
+    : undefined;
 
   return (
     <div className="page-shell">
       <PageHeader page={page} />
       <SourceStrip source={source} sourceMessage={sourceMessage} status={page.status} label="Agent Link" />
+      <SelectedContextBar label="Selected Agent Context" selection={selection} />
 
       <section className="metrics-grid">
         {page.metrics.map((metric) => (
           <MetricCard key={metric.label} metric={metric} />
         ))}
       </section>
+
+      {selection.agentId ? selectedAgent ? (
+        <RecordDetailPanel
+          title={selectedAgent.name}
+          eyebrow={selectedAgent.agentId}
+          statusLabel={selectedAgent.runtimeStatus}
+          statusTone={agentRuntimeTone(selectedAgent.runtimeStatus)}
+          summary={selectedAgent.stateSummary ?? `${selectedAgent.role} agent profile.`}
+          meta={[
+            selectedAgent.role,
+            `${selectedAgent.capabilityIds.length} capabilities`,
+            `${selectedAgent.missionQueue.length} queued missions`,
+          ]}
+          relatedLinks={[
+            ...(selectedAgent.missionQueue[0] ? [{ label: "Open Current Mission", page: "missions" as NavPage, selection: { missionId: selectedAgent.missionQueue[0] } }] : []),
+            ...(selectedAssignment?.missionId ? [{ label: "Open Assignment Mission", page: "missions" as NavPage, selection: { missionId: selectedAssignment.missionId } }] : []),
+          ]}
+          onNavigate={onNavigate}
+        />
+      ) : (
+        <div className="empty-state detail-empty-state">
+          <strong>Agent Not Found</strong>
+          <p>No agent matched `agentId={selection.agentId}` in the current live or seeded data.</p>
+        </div>
+      ) : null}
 
       <section className="operations-layout">
         <AgentStatusGrid page={page} />
@@ -45,7 +81,7 @@ export function AgentDashboard({ page, agentCentre, source, sourceMessage, onNav
 
       <AgentStatusSections active={activeAgents} idle={idleAgents} failed={failedAgents} />
 
-      <AgentProfilePanel profiles={agentCentre.profiles} onNavigate={onNavigate} />
+      <AgentProfilePanel profiles={agentCentre.profiles} selectedAgentId={selection.agentId} onNavigate={onNavigate} />
 
       <section className="mission-support-grid">
         <AgentAssignmentHistoryPanel assignments={agentCentre.assignments} />

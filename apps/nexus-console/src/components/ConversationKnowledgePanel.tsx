@@ -1,8 +1,9 @@
+import type { RouteSelection } from "../routing";
 import type { ConversationKnowledgeLinkRecord, NavPage } from "../data/mockKernel";
 
 type ConversationKnowledgePanelProps = {
   knowledgeLinks: ConversationKnowledgeLinkRecord[];
-  onNavigate: (page: NavPage) => void;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
 export function ConversationKnowledgePanel({ knowledgeLinks, onNavigate }: ConversationKnowledgePanelProps) {
@@ -19,7 +20,7 @@ export function ConversationKnowledgePanel({ knowledgeLinks, onNavigate }: Conve
         <div className="agent-capability-list">
           {knowledgeLinks.map((link, index) => (
             <div key={`${link.conversationId}-${link.knowledgeAssetId}-${index}`} className="agent-capability-item linked-knowledge-row">
-              <button type="button" className="mission-chip route-chip-button" onClick={() => onNavigate("knowledge")}>
+              <button type="button" className="mission-chip route-chip-button" onClick={() => onNavigate("knowledge", { assetId: link.knowledgeAssetId })}>
                 {link.knowledgeAssetId}
               </button>
               <span className="agent-capability-agents">
@@ -27,7 +28,7 @@ export function ConversationKnowledgePanel({ knowledgeLinks, onNavigate }: Conve
                 {link.threadId ? ` / ${link.threadId}` : ""}
                 {link.messageId ? ` / ${link.messageId}` : ""}
               </span>
-              <button type="button" className="route-chip" onClick={() => onNavigate("conversations")}>
+              <button type="button" className="route-chip" onClick={() => onNavigate("conversations", { conversationId: link.conversationId })}>
                 Open Conversation
               </button>
             </div>

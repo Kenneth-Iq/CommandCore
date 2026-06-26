@@ -1,5 +1,6 @@
 import type { NavPage } from "../data/mockKernel";
-import type { KnowledgeCentreData } from "../data/nexusCentres";
+import type { KnowledgeAssetRecord, KnowledgeCentreData } from "../data/nexusCentres";
+import type { RouteSelection } from "../routing";
 import { ScopeBadge } from "./ScopeBadge";
 import { StatusBadge } from "./StatusBadge";
 
@@ -12,12 +13,13 @@ const routeLinks: Array<{ label: string; page: NavPage }> = [
 
 type KnowledgeCentreProps = {
   knowledgeCentre: KnowledgeCentreData;
-  onNavigate: (page: NavPage) => void;
+  selectedAssetId?: string;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
-export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentreProps) {
+export function KnowledgeCentre({ knowledgeCentre, selectedAssetId, onNavigate }: KnowledgeCentreProps) {
   const assets = knowledgeCentre.assets;
-  const focusAsset = assets[0];
+  const focusAsset = assets.find((asset) => asset.assetId === selectedAssetId) ?? assets[0];
 
   return (
     <section className="knowledge-centre-grid">
@@ -28,15 +30,20 @@ export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentre
         </div>
         <div className="knowledge-search-placeholder">
           <div>
-            <strong>Search Placeholder</strong>
-            <p>Knowledge search UI is staged for local routing only in this wave.</p>
+            <strong>Selected Asset Routing</strong>
+            <p>Asset selection now persists in the URL and lands on exact detail state.</p>
           </div>
-          <span>Ctrl K routes pages</span>
+          <span>{selectedAssetId ?? "No asset selected"}</span>
         </div>
         {assets.length ? (
           <div className="knowledge-summary-cards">
             {assets.slice(0, 3).map((asset) => (
-              <article key={asset.assetId} className="knowledge-summary-card">
+              <button
+                key={asset.assetId}
+                type="button"
+                className={`knowledge-summary-card selectable-card ${selectedAssetId === asset.assetId ? "is-selected" : ""}`}
+                onClick={() => onNavigate("knowledge", { assetId: asset.assetId })}
+              >
                 <div className="knowledge-card-header">
                   <strong>{asset.title}</strong>
                   <StatusBadge tone={asset.safeToQuery ? "ready" : "warning"}>
@@ -53,7 +60,7 @@ export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentre
                     <ScopeBadge key={`${asset.assetId}-${scope.kind}-${scope.value}`} scope={scope} />
                   ))}
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         ) : (
@@ -72,7 +79,12 @@ export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentre
         {assets.length ? (
           <div className="knowledge-asset-list">
             {assets.map((asset) => (
-              <article key={asset.assetId} className="knowledge-asset-row">
+              <button
+                key={asset.assetId}
+                type="button"
+                className={`knowledge-asset-row selectable-card ${selectedAssetId === asset.assetId ? "is-selected" : ""}`}
+                onClick={() => onNavigate("knowledge", { assetId: asset.assetId })}
+              >
                 <div>
                   <div className="knowledge-card-header">
                     <strong>{asset.title}</strong>
@@ -91,7 +103,7 @@ export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentre
                   </StatusBadge>
                   <span>{asset.assetType}</span>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         ) : (
@@ -109,7 +121,7 @@ export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentre
         </div>
         {focusAsset ? (
           <div className="knowledge-linked-body">
-            <div className="knowledge-focus-card">
+            <div className="knowledge-focus-card is-selected">
               <div className="knowledge-card-header">
                 <strong>{focusAsset.title}</strong>
                 <StatusBadge tone={focusAsset.safeToQuery ? "ready" : "warning"}>
@@ -119,13 +131,20 @@ export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentre
               <p>{focusAsset.summary}</p>
               <div className="scope-badge-row">
                 {focusAsset.scopes.map((scope) => (
-                  <ScopeBadge key={`${focusAsset.assetId}-${scope.kind}-${scope.value}`} scope={scope} />
+                  <button
+                    key={`${focusAsset.assetId}-${scope.kind}-${scope.value}`}
+                    type="button"
+                    className="scope-button"
+                    onClick={() => navigateFromScope(scope.kind, scope.value, onNavigate)}
+                  >
+                    <ScopeBadge scope={scope} />
+                  </button>
                 ))}
               </div>
             </div>
             <div className="linked-asset-list">
               {focusAsset.linkedAssetIds.length ? focusAsset.linkedAssetIds.map((assetId) => (
-                <div key={assetId} className="linked-asset-chip">{assetId}</div>
+                <button key={assetId} type="button" className="linked-asset-chip route-chip-button" onClick={() => onNavigate("knowledge", { assetId })}>{assetId}</button>
               )) : (
                 <div className="empty-state compact-empty">
                   <strong>No Linked Assets</strong>
@@ -150,4 +169,22 @@ export function KnowledgeCentre({ knowledgeCentre, onNavigate }: KnowledgeCentre
       </article>
     </section>
   );
+}
+
+function navigateFromScope(kind: KnowledgeAssetRecord["scopes"][number]["kind"], value: string, onNavigate: KnowledgeCentreProps["onNavigate"]) {
+  if (kind === "mission") {
+    onNavigate("missions", { missionId: value });
+    return;
+  }
+  if (kind === "workspace") {
+    onNavigate("workspaces", { workspaceId: value });
+    return;
+  }
+  if (kind === "company") {
+    onNavigate("workspaces", { companyId: value });
+    return;
+  }
+  if (kind === "project") {
+    onNavigate("workspaces", { projectId: value });
+  }
 }

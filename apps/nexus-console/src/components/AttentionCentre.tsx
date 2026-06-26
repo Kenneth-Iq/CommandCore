@@ -1,3 +1,4 @@
+import type { RouteSelection } from "../routing";
 import type { ActivityItem, NavPage, StatusTone } from "../data/mockKernel";
 import { StatusBadge } from "./StatusBadge";
 
@@ -8,7 +9,7 @@ type AttentionItem = ActivityItem & {
 
 type AttentionCentreProps = {
   items: AttentionItem[];
-  onNavigate: (page: NavPage) => void;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
 const orderedGroups: Array<AttentionItem["group"]> = ["Critical", "Warning", "Info", "Completed"];

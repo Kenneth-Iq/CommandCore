@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import type { NavPage } from "../data/mockKernel";
 import { commandSuggestions, type SearchEntry } from "../data/nexusCentres";
+import type { RouteSelection } from "../routing";
 import { StatusBadge } from "./StatusBadge";
 
 type CommandBarProps = {
   activePage: NavPage;
-  onNavigate: (page: NavPage) => void;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
   searchEntries: SearchEntry[];
 };
 
@@ -38,8 +39,8 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
     }).slice(0, 8);
   }, [query, searchEntries]);
 
-  function commitNavigation(page: NavPage) {
-    onNavigate(page);
+  function commitNavigation(page: NavPage, selection: RouteSelection = {}) {
+    onNavigate(page, selection);
     setQuery("");
   }
 
@@ -59,7 +60,7 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
 
     const firstResult = visibleResults[0];
     if (firstResult) {
-      commitNavigation(firstResult.page);
+      commitNavigation(firstResult.page, firstResult.selection);
     }
   }
 
@@ -122,7 +123,7 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
                 key={entry.id}
                 type="button"
                 className="command-result-row"
-                onClick={() => commitNavigation(entry.page)}
+                onClick={() => commitNavigation(entry.page, entry.selection)}
               >
                 <div>
                   <div className="knowledge-card-header">
@@ -132,7 +133,7 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
                   <p>{entry.description}</p>
                 </div>
                 <div className="knowledge-row-meta">
-                  <StatusBadge tone={entry.tone ?? "idle"}>{pageLabel(entry.page)}</StatusBadge>
+                  <StatusBadge tone={entry.tone ?? "idle"}>{pageLabel(entry.page, entry.selection)}</StatusBadge>
                 </div>
               </button>
             ))}
@@ -140,7 +141,7 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
         ) : (
           <div className="empty-state compact-empty command-empty">
             <strong>No Local Match</strong>
-            <p>Search remains local-only in this wave and routes to the nearest relevant page.</p>
+            <p>Search remains local-only in this wave and routes to the nearest exact record when available.</p>
           </div>
         )}
       </div>
@@ -148,13 +149,8 @@ export function CommandBar({ activePage, onNavigate, searchEntries }: CommandBar
   );
 }
 
-function pageLabel(page: NavPage): string {
-  switch (page) {
-    case "kernel":
-      return "Home";
-    case "workspaces":
-      return "Portfolio";
-    default:
-      return page.charAt(0).toUpperCase() + page.slice(1);
-  }
+function pageLabel(page: NavPage, selection: RouteSelection): string {
+  const hasSelection = Object.values(selection).some(Boolean);
+  const base = page === "kernel" ? "Home" : page === "workspaces" ? "Portfolio" : page.charAt(0).toUpperCase() + page.slice(1);
+  return hasSelection ? `${base} Detail` : base;
 }

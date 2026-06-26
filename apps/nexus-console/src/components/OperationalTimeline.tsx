@@ -1,3 +1,4 @@
+import type { RouteSelection } from "../routing";
 import type { ActivityItem, NavPage } from "../data/mockKernel";
 import { StatusBadge } from "./StatusBadge";
 
@@ -8,7 +9,7 @@ type OperationalTimelineItem = ActivityItem & {
 
 type OperationalTimelineProps = {
   items: OperationalTimelineItem[];
-  onNavigate: (page: NavPage) => void;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
 export function OperationalTimeline({ items, onNavigate }: OperationalTimelineProps) {

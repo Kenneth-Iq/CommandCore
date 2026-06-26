@@ -1,12 +1,14 @@
 import { agentRuntimeTone, type AgentProfile, type NavPage } from "../data/mockKernel";
+import type { RouteSelection } from "../routing";
 import { StatusBadge } from "./StatusBadge";
 
 type AgentProfilePanelProps = {
   profiles: AgentProfile[];
-  onNavigate: (page: NavPage) => void;
+  selectedAgentId?: string;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
-export function AgentProfilePanel({ profiles, onNavigate }: AgentProfilePanelProps) {
+export function AgentProfilePanel({ profiles, selectedAgentId, onNavigate }: AgentProfilePanelProps) {
   return (
     <section className="panel surface agent-profile-panel">
       <div className="panel-header">
@@ -19,13 +21,16 @@ export function AgentProfilePanel({ profiles, onNavigate }: AgentProfilePanelPro
       {profiles.length ? (
         <div className="agent-profile-grid">
           {profiles.map((agent) => (
-            <article key={agent.agentId} className="mission-card">
+            <article key={agent.agentId} className={`mission-card ${selectedAgentId === agent.agentId ? "is-selected" : ""}`}>
               <div className="mission-card-header">
                 <strong>{agent.name}</strong>
                 <StatusBadge tone={agentRuntimeTone(agent.runtimeStatus)}>{agent.runtimeStatus}</StatusBadge>
               </div>
               <p className="mission-card-id">{agent.role} / {agent.agentId}</p>
               <div className="mission-chip-row">
+                <button type="button" className="mission-chip route-chip-button" onClick={() => onNavigate("agents", { agentId: agent.agentId })}>
+                  Select Agent
+                </button>
                 {agent.capabilityIds.map((capabilityId) => (
                   <span key={capabilityId} className="mission-chip">
                     {capabilityId}
@@ -36,7 +41,7 @@ export function AgentProfilePanel({ profiles, onNavigate }: AgentProfilePanelPro
                     key={missionId}
                     type="button"
                     className="mission-chip mission-chip-muted route-chip-button"
-                    onClick={() => onNavigate("missions")}
+                    onClick={() => onNavigate("missions", { missionId })}
                   >
                     {missionId}
                   </button>
@@ -45,8 +50,8 @@ export function AgentProfilePanel({ profiles, onNavigate }: AgentProfilePanelPro
               {agent.stateSummary ? <p className="agent-profile-summary">{agent.stateSummary}</p> : null}
               {agent.missionQueue.length ? (
                 <div className="route-chip-row mission-route-row">
-                  <button type="button" className="route-chip" onClick={() => onNavigate("missions")}>
-                    Agent → Missions
+                  <button type="button" className="route-chip" onClick={() => onNavigate("missions", { missionId: agent.missionQueue[0] })}>
+                    Agent → Mission
                   </button>
                 </div>
               ) : null}

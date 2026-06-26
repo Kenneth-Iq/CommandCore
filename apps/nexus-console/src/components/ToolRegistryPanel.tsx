@@ -1,12 +1,14 @@
 import { toolPermissionTone, type NavPage, type ToolRecord } from "../data/mockKernel";
+import type { RouteSelection } from "../routing";
 import { StatusBadge } from "./StatusBadge";
 
 type ToolRegistryPanelProps = {
   tools: ToolRecord[];
-  onNavigate: (page: NavPage) => void;
+  selectedToolId?: string;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
-export function ToolRegistryPanel({ tools, onNavigate }: ToolRegistryPanelProps) {
+export function ToolRegistryPanel({ tools, selectedToolId, onNavigate }: ToolRegistryPanelProps) {
   return (
     <section className="panel surface tool-registry-panel">
       <div className="panel-header">
@@ -19,7 +21,7 @@ export function ToolRegistryPanel({ tools, onNavigate }: ToolRegistryPanelProps)
       {tools.length ? (
         <div className="agent-profile-grid">
           {tools.map((tool) => (
-            <article key={tool.toolId} className="mission-card">
+            <article key={tool.toolId} className={`mission-card ${selectedToolId === tool.toolId ? "is-selected" : ""}`}>
               <div className="mission-card-header">
                 <strong>{tool.name}</strong>
                 <StatusBadge tone={toolPermissionTone(tool.permissionLevel)}>{tool.permissionLevel}</StatusBadge>
@@ -27,12 +29,15 @@ export function ToolRegistryPanel({ tools, onNavigate }: ToolRegistryPanelProps)
               <p className="mission-card-id">{tool.toolId}</p>
               <p className="agent-profile-summary">{tool.description}</p>
               <div className="mission-chip-row">
+                <button type="button" className="mission-chip route-chip-button" onClick={() => onNavigate("tools", { toolId: tool.toolId })}>
+                  Select Tool
+                </button>
                 {tool.capabilityId ? <span className="mission-chip">{tool.capabilityId}</span> : null}
                 {tool.agentId ? (
                   <button
                     type="button"
                     className="mission-chip mission-chip-muted route-chip-button"
-                    onClick={() => onNavigate("agents")}
+                    onClick={() => onNavigate("agents", { agentId: tool.agentId })}
                   >
                     {tool.agentId}
                   </button>
@@ -41,8 +46,11 @@ export function ToolRegistryPanel({ tools, onNavigate }: ToolRegistryPanelProps)
               </div>
               {tool.agentId ? (
                 <div className="route-chip-row mission-route-row">
-                  <button type="button" className="route-chip" onClick={() => onNavigate("agents")}>
+                  <button type="button" className="route-chip" onClick={() => onNavigate("agents", { agentId: tool.agentId })}>
                     Tool → Agent
+                  </button>
+                  <button type="button" className="route-chip" onClick={() => onNavigate("tools", { toolId: tool.toolId })}>
+                    Tool → Invocation
                   </button>
                 </div>
               ) : null}

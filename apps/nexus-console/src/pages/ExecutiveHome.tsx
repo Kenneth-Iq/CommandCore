@@ -4,6 +4,7 @@ import { OperationalTimeline } from "../components/OperationalTimeline";
 import { PageHeader } from "../components/PageHeader";
 import { SourceStrip } from "../components/SourceStrip";
 import { StatusBadge } from "../components/StatusBadge";
+import type { RouteSelection } from "../routing";
 import type { DataSource } from "../api/commandcoreApi";
 import type {
   ActivityItem,
@@ -28,7 +29,7 @@ type ExecutiveHomeProps = {
   portfolioExplorer: PortfolioExplorerData;
   source: DataSource;
   sourceMessage?: string;
-  onNavigate: (page: NavPage) => void;
+  onNavigate: (page: NavPage, selection?: RouteSelection) => void;
 };
 
 type RoutedActivity = ActivityItem & {
