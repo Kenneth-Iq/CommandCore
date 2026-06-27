@@ -11,7 +11,8 @@ export type NavPage =
   | "workspaces"
   | "health"
   | "settings"
-  | "boardroom";
+  | "boardroom"
+  | "hermes";
 
 export type MetricCard = {
   label: string;
@@ -274,6 +275,7 @@ export type KernelSnapshot = {
   healthReadiness: PageData;
   settingsPage: PageData;
   boardroomPage: PageData;
+  hermesPage: PageData;
 };
 
 export type NavItem = { id: NavPage; label: string; short: string };
@@ -297,6 +299,7 @@ export const navGroups: NavGroup[] = [
       { id: "missions", label: "Missions", short: "MSSN" },
       { id: "agents", label: "Agents", short: "AGNT" },
       { id: "tools", label: "Tools", short: "TOOL" },
+      { id: "hermes", label: "Hermes Preview", short: "HRMS" },
     ],
   },
   {
@@ -719,6 +722,36 @@ export const mockKernel: KernelSnapshot = {
     ],
     emptyState: "Boardroom activity will appear here once walls are configured.",
   },
+  hermesPage: {
+    eyebrow: "Tool Runtime / Hermes",
+    title: "Hermes Mission Centre Preview",
+    description: "A preview of the future Hermes tool-execution layer: mission, execution, tool, policy, and approval queues, all simulated. Execution is disabled.",
+    status: { label: "Preview Mode", tone: "idle" },
+    metrics: [
+      { label: "Execution Mode", value: "Disabled", hint: "No real execution occurs anywhere in this preview.", tone: "blocked" },
+      { label: "Queues", value: 5, hint: "Mission, Execution, Tool, Policy, Approval", tone: "active" },
+      { label: "Write Operations", value: "Disabled", hint: "Read-only milestone.", tone: "blocked" },
+    ],
+    primaryPanel: {
+      title: "Preview Scope",
+      rows: [
+        { title: "Simulated Queues", subtitle: "Every queue is derived from existing read-only data, not a real scheduler.", badge: "Simulated", badgeTone: "idle" },
+        { title: "Execution Disabled", subtitle: "No command has ever been issued from this surface.", badge: "Disabled", badgeTone: "blocked" },
+      ],
+    },
+    secondaryPanel: {
+      title: "Current State",
+      rows: [
+        { title: "Read-only milestone", subtitle: "No write controls are enabled anywhere in Hermes Preview.", badge: "Safe", badgeTone: "ready" },
+        { title: "Future Layer", subtitle: "Real Hermes execution is a future milestone, not implemented here.", badge: "Planned", badgeTone: "idle" },
+      ],
+    },
+    activityTitle: "Recent Hermes Preview Signals",
+    activity: [
+      { id: "h1", eventName: "HermesPreviewReady", source: "nexus-console", occurredAt: "now", detail: "Hermes Mission Centre preview is ready to inspect.", tone: "idle" },
+    ],
+    emptyState: "Hermes preview activity will appear here as queues populate.",
+  },
 };
 
 export const mockMissionCentre: MissionCentreData = {
@@ -1078,4 +1111,5 @@ export const pageMap: Record<NavPage, PageData> = {
   health: mockKernel.healthReadiness,
   settings: mockKernel.settingsPage,
   boardroom: mockKernel.boardroomPage,
+  hermes: mockKernel.hermesPage,
 };

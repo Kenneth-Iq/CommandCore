@@ -4252,3 +4252,314 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.jarvis-presence-alert {
+  animation: jarvis-pulse-alert 0.6s ease-in-out infinite;
+  border-color: rgba(255, 122, 122, 0.7);
+}
+
+.jarvis-presence-listening {
+  animation: jarvis-pulse-listening 1.4s ease-in-out infinite;
+  border-color: rgba(120, 200, 255, 0.6);
+}
+
+@keyframes jarvis-pulse-alert {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 122, 122, 0.5); }
+  50% { box-shadow: 0 0 0 12px rgba(255, 122, 122, 0.18); }
+}
+
+@keyframes jarvis-pulse-listening {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(120, 200, 255, 0.35); }
+  50% { box-shadow: 0 0 0 9px rgba(120, 200, 255, 0.12); }
+}
+
+.jarvis-dock-tabs {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid rgba(129, 170, 221, 0.12);
+  padding-bottom: 0.5rem;
+}
+
+.jarvis-dock-tab {
+  border: none;
+  background: transparent;
+  color: #8ca6cc;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.jarvis-dock-tab.is-active {
+  background: rgba(77, 184, 255, 0.16);
+  color: #dbe7fb;
+}
+
+.jarvis-dock-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.jarvis-dock-log-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(129, 170, 221, 0.1);
+  background: rgba(6, 13, 25, 0.4);
+}
+
+.jarvis-dock-log-entry p {
+  margin: 0;
+  color: #c8d4e8;
+  font-size: 0.85rem;
+}
+
+.jarvis-dock-log-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.jarvis-pin-toggle {
+  border: none;
+  background: transparent;
+  color: #ffc979;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.workspace-layout-switcher-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.route-chip.is-active-layout {
+  border-color: rgba(77, 184, 255, 0.5);
+  background: rgba(77, 184, 255, 0.18);
+  color: #dbe7fb;
+}
+
+.workspace-panel-frame {
+  position: relative;
+}
+
+.workspace-panel-frame-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.workspace-size-toggle {
+  display: inline-flex;
+  border-radius: 0.6rem;
+  overflow: hidden;
+  border: 1px solid rgba(129, 170, 221, 0.16);
+}
+
+.workspace-size-button {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: none;
+  background: rgba(8, 14, 27, 0.7);
+  color: #8ca6cc;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.workspace-size-button.is-active {
+  background: rgba(77, 184, 255, 0.22);
+  color: #8bd0ff;
+}
+
+.workspace-fullscreen-toggle {
+  border: 1px solid rgba(129, 170, 221, 0.16);
+  background: rgba(8, 14, 27, 0.6);
+  color: #8ca6cc;
+  border-radius: 0.6rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.workspace-fullscreen-toggle:hover {
+  color: #dbe7fb;
+  border-color: rgba(77, 184, 255, 0.32);
+}
+
+.workspace-panel-size-compact {
+  max-width: 48rem;
+}
+
+.workspace-panel-size-expanded {
+  max-width: none;
+}
+
+.workspace-panel-frame.is-fullscreen {
+  position: fixed;
+  inset: 1.5rem;
+  z-index: 250;
+  overflow-y: auto;
+  background: rgba(4, 8, 16, 0.97);
+  border-radius: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(77, 184, 255, 0.24);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.operational-health-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(129, 170, 221, 0.1);
+  background: rgba(6, 13, 25, 0.4);
+  margin-bottom: 0.5rem;
+}
+
+.operational-health-ribbon-score {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #8ca6cc;
+  font-size: 0.76rem;
+}
+
+.operational-health-ribbon-pulses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  flex: 1;
+}
+
+.operational-pulse-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  color: #aebdda;
+}
+
+.operational-pulse-chip-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.operational-pulse-chip-dot.tone-ready {
+  background: #6ee7a8;
+}
+
+.operational-pulse-chip-dot.tone-warning {
+  background: #ffc979;
+}
+
+.operational-pulse-chip-dot.tone-blocked {
+  background: #ff8a8a;
+}
+
+.operational-pulse-chip-dot.tone-active {
+  background: #8bd0ff;
+}
+
+.operational-pulse-chip-dot.tone-complete {
+  background: #9af0c0;
+}
+
+.operational-pulse-chip-dot.tone-idle {
+  background: #5b6f8f;
+}
+
+.operational-pulse-chip-label {
+  color: #6f86ad;
+}
+
+.hermes-queue-board-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.hermes-queue-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hermes-queue-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hermes-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.hermes-queue-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(129, 170, 221, 0.1);
+  background: rgba(6, 13, 25, 0.4);
+  color: #c8d4e8;
+  cursor: pointer;
+  font: inherit;
+}
+
+.hermes-queue-item:hover {
+  border-color: rgba(77, 184, 255, 0.32);
+}
+
+.hermes-queue-item.is-selected {
+  border-color: rgba(77, 184, 255, 0.5);
+  background: rgba(77, 184, 255, 0.12);
+}
+
+.hermes-queue-item-status {
+  font-size: 0.72rem;
+  color: #6f86ad;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hermes-execution-preview {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(129, 170, 221, 0.16);
+}
+
+.hermes-execution-preview-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+@media (max-width: 1280px) {
+  .hermes-queue-board-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .hermes-queue-board-grid {
+    grid-template-columns: 1fr;
+  }
+}

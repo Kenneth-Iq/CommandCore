@@ -1,4 +1,4 @@
-import type { EvidenceLink } from "./executiveAssistant";
+import type { ApprovalCard, EvidenceLink } from "./executiveAssistant";
 import type { ExecutiveSimulationState } from "./simulation";
 import type { WorldData } from "./worldModel";
 
@@ -48,4 +48,78 @@ export function buildHermesActionPreviews(world: WorldData, simulation: Executiv
       evidence: { label: "Open Tool", page: "tools", selection: { toolId: tool.toolId } },
     };
   });
+}
+
+export type HermesQueueKind = "mission" | "execution" | "tool" | "policy" | "approval";
+
+export type HermesQueueItem = {
+  id: string;
+  kind: HermesQueueKind;
+  title: string;
+  detail: string;
+  status: string;
+  evidence: EvidenceLink;
+};
+
+export function buildHermesQueues(
+  world: WorldData,
+  hermesActions: HermesActionPreview[],
+  approvalCards: ApprovalCard[],
+): Record<HermesQueueKind, HermesQueueItem[]> {
+  const missionQueue: HermesQueueItem[] = world.missionCentre.active.map((mission) => ({
+    id: `hermes-mission-${mission.missionId}`,
+    kind: "mission",
+    title: mission.title,
+    detail: `Status: ${mission.status}. Would be the originating mission for any Hermes-executed tool call.`,
+    status: "queued",
+    evidence: { label: "Open Mission", page: "missions", selection: { missionId: mission.missionId } },
+  }));
+
+  const executionQueue: HermesQueueItem[] = hermesActions
+    .filter((action) => !action.policyWarning)
+    .map((action) => ({
+      id: `hermes-execution-${action.toolId}`,
+      kind: "execution",
+      title: action.actionLabel,
+      detail: "Would execute next if Hermes execution were enabled.",
+      status: "would-execute",
+      evidence: action.evidence,
+    }));
+
+  const toolQueue: HermesQueueItem[] = hermesActions.map((action) => ({
+    id: `hermes-tool-${action.toolId}`,
+    kind: "tool",
+    title: action.toolName,
+    detail: action.description,
+    status: action.permissionLevel,
+    evidence: action.evidence,
+  }));
+
+  const policyQueue: HermesQueueItem[] = hermesActions
+    .filter((action) => action.policyWarning)
+    .map((action) => ({
+      id: `hermes-policy-${action.toolId}`,
+      kind: "policy",
+      title: action.actionLabel,
+      detail: action.policyWarning ?? "",
+      status: "blocked",
+      evidence: action.evidence,
+    }));
+
+  const approvalQueue: HermesQueueItem[] = approvalCards.map((card) => ({
+    id: `hermes-approval-${card.id}`,
+    kind: "approval",
+    title: card.title,
+    detail: card.detail,
+    status: card.status,
+    evidence: card.evidence ?? { label: "Open Executive Health Board", page: "kernel" },
+  }));
+
+  return {
+    mission: missionQueue,
+    execution: executionQueue,
+    tool: toolQueue,
+    policy: policyQueue,
+    approval: approvalQueue,
+  };
 }

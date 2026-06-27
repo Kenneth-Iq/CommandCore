@@ -23,10 +23,12 @@ import { RuntimeProvider } from "./runtimeContext";
 import { AgentDashboard } from "./pages/AgentDashboard";
 import { ConversationDashboard } from "./pages/ConversationDashboard";
 import { ExecutiveBoardroom } from "./pages/ExecutiveBoardroom";
+import { HermesPreview } from "./pages/HermesPreview";
 import { ExecutiveDashboard } from "./pages/ExecutiveDashboard";
 import { ExecutiveHome } from "./pages/ExecutiveHome";
 import { JarvisPresence } from "./components/JarvisPresence";
 import { LiveTicker } from "./components/LiveTicker";
+import { OperationalHealthRibbon } from "./components/OperationalHealthRibbon";
 import { OperationalPulse } from "./components/OperationalPulse";
 import { HealthReadiness } from "./pages/HealthReadiness";
 import { KnowledgeDashboard } from "./pages/KnowledgeDashboard";
@@ -274,6 +276,8 @@ export default function App() {
             onNavigate={handleNavigate}
           />
         );
+      case "hermes":
+        return <HermesPreview {...props} world={world} onNavigate={handleNavigate} />;
       case "health":
         return <HealthReadiness {...props} />;
       case "settings":
@@ -314,6 +318,7 @@ export default function App() {
             onNavigate={handleNavigate}
             searchEntries={searchEntries}
           />
+          {hasLoaded ? <OperationalHealthRibbon /> : null}
           {hasLoaded ? <OperationalPulse /> : null}
           {hasLoaded ? <LiveTicker /> : null}
           <ContextBreadcrumb segments={breadcrumbSegments} onNavigate={handleNavigate} />

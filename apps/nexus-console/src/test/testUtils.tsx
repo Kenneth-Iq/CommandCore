@@ -10,6 +10,7 @@ import {
 } from "../data/mockKernel";
 import { mockKnowledgeCentre, mockPortfolioExplorer } from "../data/nexusCentres";
 import type { RouteSelection } from "../routing";
+import type { ExecutiveSimulationState } from "../simulation";
 import type { WorldData } from "../worldModel";
 
 export function renderWithDefaults(element: ReactElement) {
@@ -28,5 +29,19 @@ export function buildMockWorld(): WorldData {
     toolCentre: mockToolCentre,
     conversationCentre: mockConversationCentre,
     knowledgeCentre: mockKnowledgeCentre,
+  };
+}
+
+export function buildMockSimulation(overrides: Partial<ExecutiveSimulationState> = {}): ExecutiveSimulationState {
+  return {
+    tick: 0,
+    missions: {},
+    agents: {},
+    tools: {},
+    conversations: {},
+    knowledge: {},
+    timeline: [],
+    healthScore: 82,
+    ...overrides,
   };
 }

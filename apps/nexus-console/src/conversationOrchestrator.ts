@@ -1,6 +1,9 @@
 import type { EvidenceLink } from "./executiveAssistant";
+import type { ConversationBadgeKind } from "./operatorPrefs";
 import type { ExecutiveSimulationState } from "./simulation";
 import type { WorldData } from "./worldModel";
+
+export type JarvisPresenceState = "idle" | "listening" | "thinking" | "speaking" | "alert";
 
 export type ConversationIntentKind = "mission" | "agent" | "tool" | "knowledge" | "conversation" | "attention" | "unknown";
 
@@ -184,4 +187,14 @@ export function processConversationTurn(message: string, world: WorldData, simul
     routeSuggestion,
     approval,
   };
+}
+
+export function classifyBadge(turn: ConversationTurnResult): ConversationBadgeKind {
+  if (turn.approval.status === "would_require_approval") {
+    return "approval";
+  }
+  if (turn.intent.kind === "attention" || turn.intent.kind === "mission" || turn.intent.kind === "agent" || turn.intent.kind === "tool") {
+    return turn.evidence.length ? "warning" : "information";
+  }
+  return "information";
 }

@@ -24,6 +24,9 @@ import { OperationalTimeline } from "../components/OperationalTimeline";
 import { PageHeader } from "../components/PageHeader";
 import { SourceStrip } from "../components/SourceStrip";
 import { SystemLayerLegend } from "../components/SystemLayerLegend";
+import { WorkspaceLayoutSwitcher } from "../components/WorkspaceLayoutSwitcher";
+import { WorkspacePanelFrame } from "../components/WorkspacePanelFrame";
+import { WorkspaceProvider } from "../workspaceContext";
 import { StatusBadge } from "../components/StatusBadge";
 import type { RouteSelection } from "../routing";
 import type { DataSource } from "../api/commandcoreApi";
@@ -210,44 +213,78 @@ export function ExecutiveHome({
         status={page.status}
       />
 
-      <SystemLayerLegend />
+      <WorkspaceProvider>
+        <WorkspaceLayoutSwitcher />
 
-      <ConversationContextBar context={conversationContext} />
+        <WorkspacePanelFrame panelId="systemLayerLegend" title="System Layers">
+          <SystemLayerLegend />
+        </WorkspacePanelFrame>
 
-      <JarvisConversationPanel world={world} simulation={simulation} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        <WorkspacePanelFrame panelId="conversationContext" title="Conversation Context">
+          <ConversationContextBar context={conversationContext} />
+        </WorkspacePanelFrame>
 
-      <ExecutiveBriefingPanel greeting={greeting} activePeriod={activeBriefingPeriod} briefings={briefings} />
+        <WorkspacePanelFrame panelId="jarvisConversation" title="Jarvis Conversation">
+          <JarvisConversationPanel world={world} simulation={simulation} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        </WorkspacePanelFrame>
 
-      <BriefingTypeExplorer briefings={extendedBriefings} onNavigate={onNavigate} />
+        <WorkspacePanelFrame panelId="briefing" title="Executive Briefing">
+          <ExecutiveBriefingPanel greeting={greeting} activePeriod={activeBriefingPeriod} briefings={briefings} />
+        </WorkspacePanelFrame>
 
-      <RecommendationCentre recommendations={recommendations} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        <WorkspacePanelFrame panelId="briefingTypes" title="Briefing Types">
+          <BriefingTypeExplorer briefings={extendedBriefings} onNavigate={onNavigate} />
+        </WorkspacePanelFrame>
 
-      <ApprovalCardsPanel approvals={approvalCards} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        <WorkspacePanelFrame panelId="recommendations" title="Recommendation Centre">
+          <RecommendationCentre recommendations={recommendations} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        </WorkspacePanelFrame>
 
-      <DecisionQueuePanel decisions={decisionQueue} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        <WorkspacePanelFrame panelId="approvals" title="Approval Cards">
+          <ApprovalCardsPanel approvals={approvalCards} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        </WorkspacePanelFrame>
 
-      <PendingFollowUpsPanel followUps={pendingFollowUps} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        <WorkspacePanelFrame panelId="decisionQueue" title="Decision Queue">
+          <DecisionQueuePanel decisions={decisionQueue} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        </WorkspacePanelFrame>
 
-      <ConversationMemoryTimeline memory={conversationMemory} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        <WorkspacePanelFrame panelId="followUps" title="Pending Follow Ups">
+          <PendingFollowUpsPanel followUps={pendingFollowUps} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        </WorkspacePanelFrame>
 
-      <EvidenceExplorer registry={evidenceRegistry} simulation={simulation} onNavigate={onNavigate} />
+        <WorkspacePanelFrame panelId="conversationMemory" title="Conversation Memory Timeline">
+          <ConversationMemoryTimeline memory={conversationMemory} world={world} onNavigate={onNavigate} onInvestigate={handleInvestigate} />
+        </WorkspacePanelFrame>
 
-      <EvidenceTimeline registry={evidenceRegistry} onNavigate={onNavigate} />
+        <WorkspacePanelFrame panelId="evidenceExplorer" title="Evidence Explorer">
+          <EvidenceExplorer registry={evidenceRegistry} simulation={simulation} onNavigate={onNavigate} />
+        </WorkspacePanelFrame>
 
-      <EvidenceCrossReferenceGraph registry={evidenceRegistry} onNavigate={onNavigate} />
+        <WorkspacePanelFrame panelId="evidenceTimeline" title="Evidence Timeline">
+          <EvidenceTimeline registry={evidenceRegistry} onNavigate={onNavigate} />
+        </WorkspacePanelFrame>
 
-      <EnterpriseExplorer
-        tree={worldTree}
-        summary={worldSummary}
-        healthStatus={pages.health.status}
-        readinessStatus={pages.kernel.status}
-        selection={{}}
-        expanded={expandedWorldNodes}
-        onToggle={toggleWorldNode}
-        onNavigate={onNavigate}
-      />
+        <WorkspacePanelFrame panelId="evidenceCrossReference" title="Cross-Reference Graph">
+          <EvidenceCrossReferenceGraph registry={evidenceRegistry} onNavigate={onNavigate} />
+        </WorkspacePanelFrame>
 
-      <GalaxyNavigator tree={galaxyTree} selection={{}} onNavigate={onNavigate} />
+        <WorkspacePanelFrame panelId="enterpriseExplorer" title="Enterprise World Model">
+          <EnterpriseExplorer
+            tree={worldTree}
+            summary={worldSummary}
+            healthStatus={pages.health.status}
+            readinessStatus={pages.kernel.status}
+            selection={{}}
+            expanded={expandedWorldNodes}
+            onToggle={toggleWorldNode}
+            onNavigate={onNavigate}
+          />
+        </WorkspacePanelFrame>
+
+        <WorkspacePanelFrame panelId="galaxyNavigator" title="Planetary Navigation Preview">
+          <GalaxyNavigator tree={galaxyTree} selection={{}} onNavigate={onNavigate} />
+        </WorkspacePanelFrame>
+      </WorkspaceProvider>
 
       <RecentlyViewedPanel items={recentlyViewed} onNavigate={onNavigate} />
 

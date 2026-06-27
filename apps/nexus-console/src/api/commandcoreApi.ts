@@ -104,6 +104,7 @@ export async function loadConsoleData(): Promise<ConsoleDataResult> {
         health: buildHealthDashboard(health, readiness),
         settings: pageMap.settings,
         boardroom: pageMap.boardroom,
+        hermes: pageMap.hermes,
       },
       missionCentre: buildMissionCentre(missions),
       agentCentre: buildAgentCentre(agents),

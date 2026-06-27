@@ -236,3 +236,233 @@ export function useBoardroomLayout() {
 
   return { layout, setSize, toggleVisible, move, reset };
 }
+
+export type ConversationBadgeKind = "information" | "recommendation" | "warning" | "decision" | "approval";
+
+export type ConversationLogEntry = {
+  id: string;
+  summary: string;
+  badge: ConversationBadgeKind;
+  occurredAt: string;
+  page?: NavPage;
+  selection?: RouteSelection;
+};
+
+const CONVERSATION_LOG_KEY = "nexus.jarvis.conversationLog";
+const CONVERSATION_LOG_LIMIT = 20;
+
+export function useConversationLog() {
+  const [entries, setEntries] = useState<ConversationLogEntry[]>(
+    () => readLocalStorage<ConversationLogEntry[]>(CONVERSATION_LOG_KEY, []),
+  );
+
+  useEffect(() => {
+    writeLocalStorage(CONVERSATION_LOG_KEY, entries);
+  }, [entries]);
+
+  function record(entry: Omit<ConversationLogEntry, "id" | "occurredAt">) {
+    const logged: ConversationLogEntry = { ...entry, id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, occurredAt: new Date().toISOString() };
+    setEntries((previous) => [logged, ...previous].slice(0, CONVERSATION_LOG_LIMIT));
+    return logged;
+  }
+
+  function clear() {
+    setEntries([]);
+  }
+
+  return { entries, record, clear };
+}
+
+const PINNED_CONVERSATIONS_KEY = "nexus.jarvis.pinnedConversations";
+
+export function usePinnedConversations() {
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(
+    () => new Set(readLocalStorage<string[]>(PINNED_CONVERSATIONS_KEY, [])),
+  );
+
+  useEffect(() => {
+    writeLocalStorage(PINNED_CONVERSATIONS_KEY, Array.from(pinnedIds));
+  }, [pinnedIds]);
+
+  function toggle(id: string) {
+    setPinnedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function isPinned(id: string): boolean {
+    return pinnedIds.has(id);
+  }
+
+  return { pinnedIds, toggle, isPinned };
+}
+
+export type WorkspaceLayoutId = "executive" | "focus" | "operations" | "investigation";
+
+export type WorkspacePanelId =
+  | "systemLayerLegend"
+  | "conversationContext"
+  | "jarvisConversation"
+  | "briefing"
+  | "briefingTypes"
+  | "recommendations"
+  | "approvals"
+  | "decisionQueue"
+  | "followUps"
+  | "conversationMemory"
+  | "evidenceExplorer"
+  | "evidenceTimeline"
+  | "evidenceCrossReference"
+  | "enterpriseExplorer"
+  | "galaxyNavigator";
+
+export type WorkspacePanelConfig = {
+  id: WorkspacePanelId;
+  visible: boolean;
+  fullscreen?: boolean;
+  size: WidgetSize;
+};
+
+export type WorkspaceLayout = {
+  id: WorkspaceLayoutId;
+  label: string;
+  panels: WorkspacePanelConfig[];
+};
+
+const ALL_PANEL_IDS: WorkspacePanelId[] = [
+  "systemLayerLegend",
+  "conversationContext",
+  "jarvisConversation",
+  "briefing",
+  "briefingTypes",
+  "recommendations",
+  "approvals",
+  "decisionQueue",
+  "followUps",
+  "conversationMemory",
+  "evidenceExplorer",
+  "evidenceTimeline",
+  "evidenceCrossReference",
+  "enterpriseExplorer",
+  "galaxyNavigator",
+];
+
+function panelsFor(visibleIds: WorkspacePanelId[]): WorkspacePanelConfig[] {
+  return ALL_PANEL_IDS.map((id) => ({ id, visible: visibleIds.includes(id), size: "standard" as WidgetSize }));
+}
+
+const defaultWorkspaceLayouts: WorkspaceLayout[] = [
+  { id: "executive", label: "Executive", panels: panelsFor(ALL_PANEL_IDS) },
+  {
+    id: "focus",
+    label: "Focus",
+    panels: panelsFor(["systemLayerLegend", "conversationContext", "jarvisConversation", "briefing", "recommendations", "followUps"]),
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    panels: panelsFor(["briefingTypes", "decisionQueue", "approvals", "evidenceExplorer", "enterpriseExplorer", "galaxyNavigator"]),
+  },
+  {
+    id: "investigation",
+    label: "Investigation",
+    panels: panelsFor(["conversationMemory", "evidenceExplorer", "evidenceTimeline", "evidenceCrossReference", "enterpriseExplorer"]),
+  },
+];
+
+const WORKSPACE_LAYOUT_KEY = "nexus.executiveWorkspace.layouts";
+const WORKSPACE_ACTIVE_KEY = "nexus.executiveWorkspace.activeLayout";
+
+export function useExecutiveWorkspace() {
+  const [layouts, setLayouts] = useState<WorkspaceLayout[]>(
+    () => readLocalStorage<WorkspaceLayout[]>(WORKSPACE_LAYOUT_KEY, defaultWorkspaceLayouts),
+  );
+  const [activeLayoutId, setActiveLayoutId] = useState<WorkspaceLayoutId>(
+    () => readLocalStorage<WorkspaceLayoutId>(WORKSPACE_ACTIVE_KEY, "executive"),
+  );
+  const [fullscreenPanelId, setFullscreenPanelId] = useState<WorkspacePanelId | undefined>(undefined);
+
+  useEffect(() => {
+    writeLocalStorage(WORKSPACE_LAYOUT_KEY, layouts);
+  }, [layouts]);
+
+  useEffect(() => {
+    writeLocalStorage(WORKSPACE_ACTIVE_KEY, activeLayoutId);
+  }, [activeLayoutId]);
+
+  const activeLayout = layouts.find((layout) => layout.id === activeLayoutId) ?? layouts[0];
+
+  function togglePanel(panelId: WorkspacePanelId) {
+    setLayouts((previous) =>
+      previous.map((layout) =>
+        layout.id === activeLayoutId
+          ? { ...layout, panels: layout.panels.map((panel) => (panel.id === panelId ? { ...panel, visible: !panel.visible } : panel)) }
+          : layout,
+      ),
+    );
+  }
+
+  function selectLayout(layoutId: WorkspaceLayoutId) {
+    setActiveLayoutId(layoutId);
+    setFullscreenPanelId(undefined);
+  }
+
+  function resetLayout() {
+    setLayouts((previous) =>
+      previous.map((layout) => {
+        const defaults = defaultWorkspaceLayouts.find((candidate) => candidate.id === layout.id);
+        return defaults ? { ...layout, panels: defaults.panels } : layout;
+      }),
+    );
+  }
+
+  function enterFullscreen(panelId: WorkspacePanelId) {
+    setFullscreenPanelId(panelId);
+  }
+
+  function exitFullscreen() {
+    setFullscreenPanelId(undefined);
+  }
+
+  function isPanelVisible(panelId: WorkspacePanelId): boolean {
+    if (fullscreenPanelId) {
+      return fullscreenPanelId === panelId;
+    }
+    return activeLayout?.panels.find((panel) => panel.id === panelId)?.visible ?? true;
+  }
+
+  function panelSize(panelId: WorkspacePanelId): WidgetSize {
+    return activeLayout?.panels.find((panel) => panel.id === panelId)?.size ?? "standard";
+  }
+
+  function setPanelSize(panelId: WorkspacePanelId, size: WidgetSize) {
+    setLayouts((previous) =>
+      previous.map((layout) =>
+        layout.id === activeLayoutId
+          ? { ...layout, panels: layout.panels.map((panel) => (panel.id === panelId ? { ...panel, size } : panel)) }
+          : layout,
+      ),
+    );
+  }
+
+  return {
+    layouts,
+    activeLayout,
+    activeLayoutId,
+    selectLayout,
+    togglePanel,
+    panelSize,
+    setPanelSize,
+    resetLayout,
+    fullscreenPanelId,
+    enterFullscreen,
+    exitFullscreen,
+    isPanelVisible,
+  };
+}

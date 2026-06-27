@@ -28,6 +28,7 @@ const pathByPage: Record<NavPage, string> = {
   health: "/health",
   settings: "/settings",
   boardroom: "/boardroom",
+  hermes: "/hermes",
 };
 
 const pageByPath = new Map<string, NavPage>(
