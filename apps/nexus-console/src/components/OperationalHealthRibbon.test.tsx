@@ -28,4 +28,27 @@ describe("OperationalHealthRibbon", () => {
     );
     expect(screen.getByText("Live Health Score")).toBeInTheDocument();
   });
+
+  it("folds the simulation tick indicator into the ribbon now that OperationalPulse is retired", () => {
+    const world = buildMockWorld();
+    renderWithDefaults(
+      <RuntimeProvider world={world} activePage="kernel" onNavigate={createMockOnNavigate()}>
+        <OperationalHealthRibbon />
+      </RuntimeProvider>,
+    );
+    expect(screen.getByText("Tick 0")).toBeInTheDocument();
+  });
+
+  it("exposes the tick and health score together via the ribbon's title attribute", () => {
+    const world = buildMockWorld();
+    renderWithDefaults(
+      <RuntimeProvider world={world} activePage="kernel" onNavigate={createMockOnNavigate()}>
+        <OperationalHealthRibbon />
+      </RuntimeProvider>,
+    );
+    expect(screen.getByRole("status", { name: "Global operational health ribbon" })).toHaveAttribute(
+      "title",
+      expect.stringContaining("Simulated operational tick 0"),
+    );
+  });
 });

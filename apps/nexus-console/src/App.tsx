@@ -29,7 +29,6 @@ import { ExecutiveHome } from "./pages/ExecutiveHome";
 import { JarvisPresence } from "./components/JarvisPresence";
 import { LiveTicker } from "./components/LiveTicker";
 import { OperationalHealthRibbon } from "./components/OperationalHealthRibbon";
-import { OperationalPulse } from "./components/OperationalPulse";
 import { HealthReadiness } from "./pages/HealthReadiness";
 import { KnowledgeDashboard } from "./pages/KnowledgeDashboard";
 import { MissionDashboard } from "./pages/MissionDashboard";
@@ -319,7 +318,6 @@ export default function App() {
             searchEntries={searchEntries}
           />
           {hasLoaded ? <OperationalHealthRibbon /> : null}
-          {hasLoaded ? <OperationalPulse /> : null}
           {hasLoaded ? <LiveTicker /> : null}
           <ContextBreadcrumb segments={breadcrumbSegments} onNavigate={handleNavigate} />
           {hasLoaded ? renderedPage : <LoadingState label="Connecting To CommandCore" detail="Loading the current operating picture from the live API or seeded fallback..." />}

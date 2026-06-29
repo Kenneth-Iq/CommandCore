@@ -59,12 +59,18 @@ export function OperationalHealthRibbon() {
   ];
 
   return (
-    <div className="operational-health-ribbon" role="status" aria-label="Global operational health ribbon">
+    <div
+      className="operational-health-ribbon"
+      role="status"
+      aria-label="Global operational health ribbon"
+      title={`Simulated operational tick ${simulation.tick} — health score ${simulation.healthScore}/100`}
+    >
       <div className="operational-health-ribbon-score">
         <StatusBadge tone={simulation.healthScore >= 70 ? "ready" : simulation.healthScore >= 40 ? "warning" : "blocked"}>
           {simulation.healthScore}
         </StatusBadge>
         <span>Live Health Score</span>
+        <span className="operational-health-ribbon-tick">Tick {simulation.tick}</span>
       </div>
       <div className="operational-health-ribbon-pulses">
         {pulses.map((pulse) => (
