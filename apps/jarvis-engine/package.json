@@ -1,0 +1,15 @@
+{
+  "name": "@commandcore/jarvis-engine",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Jarvis conversation engine skeleton: deterministic, no-AI turn processing contracts and a dev/test engine implementation. Standalone, not wired into the Nexus frontend or CommandCore. See docs/architecture/Jarvis-Conversation-Engine-Boundary.md.",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.9"
+  }
+}
