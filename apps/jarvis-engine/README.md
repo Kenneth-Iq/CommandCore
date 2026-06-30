@@ -35,6 +35,13 @@ see `docs/architecture/Jarvis-Conversation-Engine-Boundary.md`.
   class has exactly one method, `retrieve`, and no write method of any kind
   — Jarvis can ask Glassmind for memory through it; it can never write to
   Glassmind through it.
+- `devGlassmindHarness.ts` — a **dev/test-only** harness wiring
+  `DeterministicJarvisConversationEngine` to `GlassmindReadOnlyMemoryAdapter`
+  over an in-process `DevFakeGlassmindStore`, demonstrating all three honest
+  memory-retrieval outcomes (`not_queried`/`no_memory_found`/`found`, with
+  and without evidence) end-to-end through the real engine. No real
+  persistence, no Nexus import, no production wiring — see
+  `docs/roadmap/Sprint-12-Implementation-Plan.md` §3 item 8.
 
 ## Honesty guarantees
 

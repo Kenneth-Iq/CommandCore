@@ -56,3 +56,6 @@ export type {
   CommandCoreEventEnvelope,
   CommandCoreEventReference,
 } from "./commandCoreEventBridge.js";
+
+export { SafeIngestionPath } from "./safeIngestionPath.js";
+export type { SafeIngestionOutcome } from "./safeIngestionPath.js";

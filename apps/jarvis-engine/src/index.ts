@@ -30,3 +30,10 @@ export type {
   GlassmindLikeSourceReference,
   GlassmindLikeStore,
 } from "./glassmindReadAdapter.js";
+
+export {
+  DevFakeGlassmindStore,
+  buildHarnessWithEmptyMemory,
+  buildHarnessWithMemory,
+  buildHarnessWithoutMemoryStore,
+} from "./devGlassmindHarness.js";

@@ -69,6 +69,14 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   contract-parity suite includes this driver (behind a fake client) as a
   third implementation, alongside `InMemoryGlassmindStore` and
   `InMemoryGlassmindPersistenceDriver`.
+- A first safe ingestion path **skeleton**, `SafeIngestionPath`
+  (`src/safeIngestionPath.ts`), composing `CommandCoreEventBridge.convert`
+  and `EventStoreIngestionAdapter.ingest` and nothing else — no new
+  eligibility rule, no new provenance handling, no payload access of its
+  own. Per `docs/architecture/CommandCore-EventStore-Bridge-Runtime-Decision.md`
+  §5, this is what a future runtime would call per envelope; it has no
+  subscription, polling loop, or production wiring (verified by a dedicated
+  structural test asserting its only methods are `process`/`processBatch`).
 
 ## What this is not (yet)
 
