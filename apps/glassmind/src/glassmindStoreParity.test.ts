@@ -8,6 +8,7 @@ import { matchesScope, matchesSourceReference } from "./recordMatchers.js";
 import type { GlassmindStore } from "./store.js";
 import type {
   ApprovalWaitingStateMemoryRecord,
+  ConversationTurnRecord,
   DeferredDecisionMemoryRecord,
   FollowUpMemoryRecord,
   GlassmindMemoryRecord,
@@ -78,6 +79,25 @@ class FakeDatabaseClient implements DatabaseClient {
  * pass the same suite before being considered done.
  */
 
+function buildConversationTurn(overrides: Partial<ConversationTurnRecord> = {}): ConversationTurnRecord {
+  return {
+    kind: "conversation_turn",
+    id: "turn-1",
+    conversationId: "conv-1",
+    sender: "jarvis",
+    intentKind: "mission",
+    intentConfidence: 75,
+    evidence: [{ label: "Open Mission", page: "missions" }],
+    responseSummary: "There are 3 missions in view, 1 blocked.",
+    approvalStatus: "not_required",
+    sourceReference: { conversationId: "conv-1" },
+    scope: { entityKind: "mission", entityId: "m-1" },
+    occurredAt: "2026-06-29T00:00:00.000Z",
+    confidence: 75,
+    ...overrides,
+  };
+}
+
 function buildFollowUp(overrides: Partial<FollowUpMemoryRecord> = {}): FollowUpMemoryRecord {
   return {
     kind: "follow_up",
@@ -141,6 +161,33 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     const record = buildFollowUp();
 
     store.recordFollowUp(record);
+
+    expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
+  });
+
+  it("accepts a conversation turn record with valid provenance and retrieves it by scope", () => {
+    const store = createStore();
+    const record = buildConversationTurn();
+
+    store.recordConversationTurn(record);
+
+    expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
+  });
+
+  it("accepts a deferred decision record with valid provenance and retrieves it by scope", () => {
+    const store = createStore();
+    const record = buildDeferredDecision();
+
+    store.recordDeferredDecision(record);
+
+    expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
+  });
+
+  it("accepts an approval waiting-state record with valid provenance and retrieves it by scope", () => {
+    const store = createStore();
+    const record = buildApprovalWaitingState();
+
+    store.recordApprovalWaitingState(record);
 
     expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
   });
