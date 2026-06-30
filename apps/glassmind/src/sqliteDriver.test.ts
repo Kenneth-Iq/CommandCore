@@ -188,6 +188,27 @@ describe("SqliteGlassmindPersistenceDriver — preserves sourceReference and lif
     expect((found as FollowUpMemoryRecord).resolution?.resolutionSourceReference).toEqual({ conversationId: "conv-resolution" });
   });
 
+  it("round-trips a lifecycle resolutionSourceReference exactly for deferred decision records", async () => {
+    const driver = await buildDriver();
+    const original = buildDeferredDecision({ sourceReference: { recommendationId: "rec-original" } });
+    driver.insertRecord(original);
+
+    const resolved: DeferredDecisionMemoryRecord = {
+      ...original,
+      status: "completed",
+      resolution: {
+        resolvedAt: "2026-06-30T01:00:00.000Z",
+        resolvedBy: "user",
+        resolutionSourceReference: { recommendationId: "rec-resolution" },
+      },
+    };
+    driver.updateRecord(resolved);
+    const found = driver.findById("deferred_decision", original.id);
+
+    expect(found?.sourceReference).toEqual({ recommendationId: "rec-original" });
+    expect((found as DeferredDecisionMemoryRecord).resolution?.resolutionSourceReference).toEqual({ recommendationId: "rec-resolution" });
+  });
+
   it("round-trips a lifecycle updateSourceReference exactly for approval waiting-state records", async () => {
     const driver = await buildDriver();
     const original = buildApprovalWaitingState({ sourceReference: { recommendationId: "rec-original" } });
