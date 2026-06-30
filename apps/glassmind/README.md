@@ -23,6 +23,21 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   field was replaced by a structured `resolution?: LifecycleResolution`
   field; `ApprovalWaitingStateMemoryRecord`'s old `resolvedAt?` field was
   replaced by `update?: LifecycleUpdate`.
+- A durable adapter **skeleton**, `DurableGlassmindStore` (`src/durableStore.ts`),
+  implementing the same `GlassmindStore` interface behind an injected
+  `GlassmindPersistenceDriver` (`insertRecord`/`updateRecord`/`findById`/
+  `findBySourceReference`/`findByScope`). With no driver configured (the
+  default), every method throws `GlassmindPersistenceNotConfiguredError`
+  rather than connecting to a real database. Provenance and not-found
+  rejection happen in this class, before the driver is ever called — see
+  `docs/architecture/Glassmind-Durable-Adapter-Design.md`.
+- An EventStore ingestion adapter **skeleton**, `EventStoreIngestionAdapter`
+  (`src/eventStoreIngestion.ts`), accepting a structurally-typed
+  `GlassmindIngestionEvent` (not imported from CommandCore), a caller-supplied
+  eligibility predicate, and a caller-supplied record builder. Not connected
+  to any real EventStore — no subscription loop, no default eligibility (so
+  nothing is ingested unless the caller explicitly opts an event in). Never
+  copies `event.payload` into a produced record.
 
 ## What this is not (yet)
 

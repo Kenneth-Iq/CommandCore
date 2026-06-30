@@ -25,4 +25,21 @@ export type { GlassmindStore } from "./store.js";
 
 export { InMemoryGlassmindStore } from "./inMemoryStore.js";
 
-export { InvalidSourceReferenceError, RecordNotFoundError, assertValidSourceReference } from "./errors.js";
+export {
+  InvalidSourceReferenceError,
+  GlassmindPersistenceNotConfiguredError,
+  RecordNotFoundError,
+  assertValidSourceReference,
+} from "./errors.js";
+
+export { DurableGlassmindStore } from "./durableStore.js";
+export type { GlassmindPersistenceDriver } from "./durableStore.js";
+
+export { EventStoreIngestionAdapter } from "./eventStoreIngestion.js";
+export type {
+  GlassmindIngestionEvent,
+  IngestionEligibility,
+  IngestionRecordBuilder,
+  IngestionResult,
+  IngestionSkipReason,
+} from "./eventStoreIngestion.js";

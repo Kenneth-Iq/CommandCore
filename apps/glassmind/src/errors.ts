@@ -44,3 +44,22 @@ export class RecordNotFoundError extends Error {
     this.name = "RecordNotFoundError";
   }
 }
+
+/**
+ * Thrown by DurableGlassmindStore when a persistence-backed operation is
+ * called without a GlassmindPersistenceDriver configured. This skeleton
+ * (see docs/architecture/Glassmind-Durable-Adapter-Design.md) is not
+ * connected to a real database — every persistence operation must fail
+ * loudly and clearly rather than silently no-op or fall back to in-memory
+ * behavior, so a misconfigured deployment is caught immediately.
+ */
+export class GlassmindPersistenceNotConfiguredError extends Error {
+  constructor(operation: string) {
+    super(
+      `Glassmind durable adapter has no persistence driver configured. Cannot perform "${operation}". ` +
+        `This is a skeleton, not connected to a real database yet — see ` +
+        `docs/architecture/Glassmind-Durable-Adapter-Design.md.`,
+    );
+    this.name = "GlassmindPersistenceNotConfiguredError";
+  }
+}
