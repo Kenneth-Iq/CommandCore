@@ -61,3 +61,15 @@ export { SafeIngestionPath } from "./safeIngestionPath.js";
 export type { SafeIngestionOutcome } from "./safeIngestionPath.js";
 
 export { createSqliteDriver, SqliteGlassmindPersistenceDriver } from "./sqliteDriver.js";
+
+export { GlassmindReadApiStub } from "./readApiStub.js";
+export type {
+  BySourceReferenceQuery,
+  ByScopeQuery,
+  GlassmindReadApiError,
+  GlassmindReadApiErrorCode,
+  GlassmindReadApiResponse,
+  GlassmindReadinessResponse,
+  GlassmindReadOnlyDependency,
+  GlassmindTraceEntry,
+} from "./readApiStub.js";

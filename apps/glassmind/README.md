@@ -99,11 +99,30 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   `apps/jarvis-engine`'s real `retrieveMemory`/`GlassmindReadOnlyMemoryAdapter`
   contract locally, per the same "declare structurally independent rather
   than cross-package import" precedent used throughout this repo.
+- A backend Glassmind read API **dev/test stub**, `GlassmindReadApiStub`
+  (`src/readApiStub.ts`), implementing
+  `docs/architecture/Glassmind-Read-Api-Contract.md`: `readBySourceReference`,
+  `readByScope`, `readTrace`, `readiness` — plain handler functions, no HTTP
+  server, no listener. Kept inside this package rather than a new one, per
+  `docs/architecture/Glassmind-Backend-Read-Api-Runtime-Decision.md` (this
+  repo has no workspace tooling, so a new package would mean a full,
+  independent boilerplate for a stub that isn't an HTTP server yet). Takes a
+  narrow `GlassmindReadOnlyDependency` (only the two read methods) rather
+  than a full `GlassmindStore`, so a write method is unreachable through
+  this stub's own type signature, not merely by convention. No import of
+  `apps/nexus-console` or `core/` exists anywhere in this file (verified by
+  dedicated structural tests).
 
 ## What this is not (yet)
 
 - Not connected to the Nexus frontend (`apps/nexus-console`) — no import in
   either direction.
+- Not a reachable network service — `GlassmindReadApiStub`'s handler
+  functions are called in-process only (by tests, or by a future caller
+  within the same process). No HTTP server, route table, or listener exists
+  anywhere in this package; building one is separate, later work once a
+  real deployment need exists, per
+  `docs/architecture/Glassmind-Backend-Read-Api-Runtime-Decision.md` §5.
 - Not connected to CommandCore's kernel (`core/`) — no import of `core/`
   exists anywhere in this package (verified by a dedicated test in
   `commandCoreEventBridge.test.ts`), and nothing subscribes
