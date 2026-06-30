@@ -59,3 +59,5 @@ export type {
 
 export { SafeIngestionPath } from "./safeIngestionPath.js";
 export type { SafeIngestionOutcome } from "./safeIngestionPath.js";
+
+export { createSqliteDriver, SqliteGlassmindPersistenceDriver } from "./sqliteDriver.js";

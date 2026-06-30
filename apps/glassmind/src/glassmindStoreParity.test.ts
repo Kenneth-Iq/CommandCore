@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseClient } from "./databaseDriver.js";
 import { DatabaseGlassmindPersistenceDriver } from "./databaseDriver.js";
 import { DurableGlassmindStore, InMemoryGlassmindPersistenceDriver } from "./durableStore.js";
 import { InvalidSourceReferenceError, RecordNotFoundError } from "./errors.js";
 import { InMemoryGlassmindStore } from "./inMemoryStore.js";
 import { matchesScope, matchesSourceReference } from "./recordMatchers.js";
+import { createSqliteDriver, SqliteGlassmindPersistenceDriver } from "./sqliteDriver.js";
 import type { GlassmindStore } from "./store.js";
 import type {
   ApprovalWaitingStateMemoryRecord,
@@ -69,14 +70,17 @@ class FakeDatabaseClient implements DatabaseClient {
 }
 
 /**
- * Contract-parity suite: every scenario here runs identically against
- * InMemoryGlassmindStore and DurableGlassmindStore (backed by the real
- * InMemoryGlassmindPersistenceDriver). Per
+ * Contract-parity suite: every scenario here runs identically across all
+ * GlassmindStore implementations in `implementations` below. Per
  * docs/architecture/Glassmind-Durable-Adapter-Design.md §14, this is the
- * single best guarantee that the durable adapter is a drop-in replacement,
- * not a parallel, subtly-different implementation. A future real database
- * driver should be added as a third entry in `implementations` below and
- * pass the same suite before being considered done.
+ * single best guarantee that the durable adapter (and now the first real
+ * SQLite-backed driver, per docs/architecture/Glassmind-DB-Technology-Decision.md)
+ * is a drop-in replacement, not a parallel, subtly-different implementation.
+ *
+ * createStore is async because SqliteGlassmindPersistenceDriver's factory
+ * (createSqliteDriver) must await sql.js's WASM module load — every method
+ * on the resulting store remains synchronous, matching GlassmindStore's
+ * interface exactly, with no change to that interface.
  */
 
 function buildConversationTurn(overrides: Partial<ConversationTurnRecord> = {}): ConversationTurnRecord {
@@ -143,7 +147,16 @@ function buildApprovalWaitingState(overrides: Partial<ApprovalWaitingStateMemory
   };
 }
 
-const implementations: Array<{ label: string; createStore: () => GlassmindStore }> = [
+let openSqliteDrivers: SqliteGlassmindPersistenceDriver[] = [];
+
+afterEach(() => {
+  for (const driver of openSqliteDrivers) {
+    driver.close();
+  }
+  openSqliteDrivers = [];
+});
+
+const implementations: Array<{ label: string; createStore: () => GlassmindStore | Promise<GlassmindStore> }> = [
   { label: "InMemoryGlassmindStore", createStore: () => new InMemoryGlassmindStore() },
   {
     label: "DurableGlassmindStore + InMemoryGlassmindPersistenceDriver",
@@ -153,11 +166,19 @@ const implementations: Array<{ label: string; createStore: () => GlassmindStore 
     label: "DurableGlassmindStore + DatabaseGlassmindPersistenceDriver (fake client)",
     createStore: () => new DurableGlassmindStore(new DatabaseGlassmindPersistenceDriver(new FakeDatabaseClient())),
   },
+  {
+    label: "DurableGlassmindStore + SqliteGlassmindPersistenceDriver",
+    createStore: async () => {
+      const driver = await createSqliteDriver();
+      openSqliteDrivers.push(driver);
+      return new DurableGlassmindStore(driver);
+    },
+  },
 ];
 
 describe.each(implementations)("GlassmindStore contract parity — $label", ({ createStore }) => {
-  it("accepts a follow-up record with valid provenance and retrieves it by scope", () => {
-    const store = createStore();
+  it("accepts a follow-up record with valid provenance and retrieves it by scope", async () => {
+    const store = await createStore();
     const record = buildFollowUp();
 
     store.recordFollowUp(record);
@@ -165,8 +186,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
   });
 
-  it("accepts a conversation turn record with valid provenance and retrieves it by scope", () => {
-    const store = createStore();
+  it("accepts a conversation turn record with valid provenance and retrieves it by scope", async () => {
+    const store = await createStore();
     const record = buildConversationTurn();
 
     store.recordConversationTurn(record);
@@ -174,8 +195,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
   });
 
-  it("accepts a deferred decision record with valid provenance and retrieves it by scope", () => {
-    const store = createStore();
+  it("accepts a deferred decision record with valid provenance and retrieves it by scope", async () => {
+    const store = await createStore();
     const record = buildDeferredDecision();
 
     store.recordDeferredDecision(record);
@@ -183,8 +204,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
   });
 
-  it("accepts an approval waiting-state record with valid provenance and retrieves it by scope", () => {
-    const store = createStore();
+  it("accepts an approval waiting-state record with valid provenance and retrieves it by scope", async () => {
+    const store = await createStore();
     const record = buildApprovalWaitingState();
 
     store.recordApprovalWaitingState(record);
@@ -192,8 +213,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(store.retrieveByScope({ entityKind: "mission", entityId: "m-1" })).toEqual([record]);
   });
 
-  it("retrieves a record by its exact sourceReference", () => {
-    const store = createStore();
+  it("retrieves a record by its exact sourceReference", async () => {
+    const store = await createStore();
     store.recordFollowUp(buildFollowUp({ sourceReference: { conversationId: "conv-42" } }));
 
     const results = store.retrieveBySourceReference({ conversationId: "conv-42" });
@@ -201,21 +222,21 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(results).toHaveLength(1);
   });
 
-  it("rejects a record with an entirely empty sourceReference", () => {
-    const store = createStore();
+  it("rejects a record with an entirely empty sourceReference", async () => {
+    const store = await createStore();
     expect(() => store.recordFollowUp(buildFollowUp({ sourceReference: {} }))).toThrow(InvalidSourceReferenceError);
   });
 
-  it("returns [] for retrieval with no matches — empty retrieval is honest, not an error", () => {
-    const store = createStore();
+  it("returns [] for retrieval with no matches — empty retrieval is honest, not an error", async () => {
+    const store = await createStore();
 
     expect(() => store.retrieveByScope({ entityKind: "mission", entityId: "no-such-mission" })).not.toThrow();
     expect(store.retrieveByScope({ entityKind: "mission", entityId: "no-such-mission" })).toEqual([]);
     expect(store.retrieveBySourceReference({ eventId: "no-such-event" })).toEqual([]);
   });
 
-  it("resolves a follow-up and preserves the original sourceReference", () => {
-    const store = createStore();
+  it("resolves a follow-up and preserves the original sourceReference", async () => {
+    const store = await createStore();
     store.recordFollowUp(buildFollowUp({ id: "followup-resolve", sourceReference: { conversationId: "conv-original" } }));
 
     const resolved = store.resolveFollowUp("followup-resolve", {
@@ -230,8 +251,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(resolved.resolution?.resolutionSourceReference).toEqual({ conversationId: "conv-resolution" });
   });
 
-  it("resolves a deferred decision and preserves the original sourceReference", () => {
-    const store = createStore();
+  it("resolves a deferred decision and preserves the original sourceReference", async () => {
+    const store = await createStore();
     store.recordDeferredDecision(buildDeferredDecision({ id: "decision-resolve", sourceReference: { recommendationId: "rec-original" } }));
 
     const resolved = store.resolveDeferredDecision("decision-resolve", {
@@ -245,8 +266,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(resolved.sourceReference).toEqual({ recommendationId: "rec-original" });
   });
 
-  it("updates an approval waiting-state record and preserves the original sourceReference", () => {
-    const store = createStore();
+  it("updates an approval waiting-state record and preserves the original sourceReference", async () => {
+    const store = await createStore();
     store.recordApprovalWaitingState(buildApprovalWaitingState({ id: "approval-update", sourceReference: { recommendationId: "rec-original" } }));
 
     const updated = store.updateApprovalWaitingState("approval-update", {
@@ -259,8 +280,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     expect(updated.sourceReference).toEqual({ recommendationId: "rec-original" });
   });
 
-  it("rejects resolving an unknown follow-up id", () => {
-    const store = createStore();
+  it("rejects resolving an unknown follow-up id", async () => {
+    const store = await createStore();
     expect(() =>
       store.resolveFollowUp("does-not-exist", {
         status: "resolved",
@@ -271,8 +292,8 @@ describe.each(implementations)("GlassmindStore contract parity — $label", ({ c
     ).toThrow(RecordNotFoundError);
   });
 
-  it("rejects a resolution with an entirely empty resolutionSourceReference", () => {
-    const store = createStore();
+  it("rejects a resolution with an entirely empty resolutionSourceReference", async () => {
+    const store = await createStore();
     store.recordFollowUp(buildFollowUp({ id: "followup-bad-resolution" }));
 
     expect(() =>

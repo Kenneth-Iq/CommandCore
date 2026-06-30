@@ -77,6 +77,19 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   §5, this is what a future runtime would call per envelope; it has no
   subscription, polling loop, or production wiring (verified by a dedicated
   structural test asserting its only methods are `process`/`processBatch`).
+- A real, **dev/test-scoped** persistence driver, `SqliteGlassmindPersistenceDriver`
+  (`src/sqliteDriver.ts`), backed by `sql.js` (pure WASM SQLite, no native
+  compilation — matching the existing precedent in `app/package.json`), per
+  `docs/architecture/Glassmind-DB-Technology-Decision.md`. This is real,
+  working SQL against a real SQLite database — real tables, real indexes,
+  real `CHECK` constraints (`migrations/001_glassmind_phase_1.sql`) — not a
+  fake or simulation. Like the other drivers, it performs no provenance
+  validation of its own; `DurableGlassmindStore` remains the sole business
+  gate. `createSqliteDriver()` creates a fresh, **in-memory** database with
+  the migration already applied — no file is created or touched on disk, so
+  every test is fully isolated with no cleanup step. `glassmindStoreParity.test.ts`'s
+  contract-parity suite includes this driver as a fourth implementation.
+  See "Running the SQLite-backed tests locally" below.
 
 ## What this is not (yet)
 
@@ -88,11 +101,15 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   `EventStoreIngestionAdapter`/`DefaultCommandCoreEventBridge` to a real
   EventStore. Both are conversion/ingestion skeletons only.
 - Not durable in production — `InMemoryGlassmindStore` and
-  `InMemoryGlassmindPersistenceDriver` both lose everything on process exit.
-  `DatabaseGlassmindPersistenceDriver` exists but has no real `DatabaseClient`
-  implementation behind it; the storage technology and runtime owner remain
-  deliberately undecided per `docs/architecture/Glassmind-Database-Adapter-Decision.md`
-  and `docs/architecture/Glassmind-Persistence-Runtime-Decision.md`.
+  `InMemoryGlassmindPersistenceDriver` both lose everything on process exit,
+  and `SqliteGlassmindPersistenceDriver` defaults to an **in-memory** SQLite
+  database that is also lost on process exit (a test-file-backed instance is
+  possible but not the default — see `createSqliteDriver`'s `seed`
+  parameter). SQLite here is a deliberate **dev/test** technology choice,
+  per `docs/architecture/Glassmind-DB-Technology-Decision.md` §4 — it is
+  explicitly not the production database decision, which remains
+  deliberately deferred until a production runtime owner is selected, per
+  `docs/architecture/Glassmind-Persistence-Runtime-Decision.md`.
 - Not authoritative for current operational state — the lifecycle methods
   update Glassmind's own remembered copy of a follow-up/decision/approval's
   status. They never call out to anything outside this package, and in
@@ -109,6 +126,22 @@ only other buildable TypeScript package in this repo. This package sits
 alongside it as a sibling app — backend-safe domain code, not frontend UI —
 rather than inside either of those, so it stays both tracked and clearly
 separate from the frontend it is not yet wired into.
+
+## Running the SQLite-backed tests locally
+
+No setup is required — `createSqliteDriver()` (`src/sqliteDriver.ts`) creates
+a fresh, in-memory `sql.js` database per call and applies
+`migrations/001_glassmind_phase_1.sql` automatically. There is no database
+server to start, no connection string to configure, and no file left behind
+on disk after a test run. `npm test` exercises `sqliteDriver.test.ts` and
+`glassmindStoreParity.test.ts`'s SQLite-backed implementation entry exactly
+like every other test in this package — no separate command or environment
+variable is needed.
+
+If a test ever needs to seed from a known starting database state, pass an
+existing database's exported bytes (`db.export()`) as `createSqliteDriver`'s
+optional `seed` parameter — not used by any current test, but supported for
+that future case.
 
 ## Commands
 
