@@ -12,6 +12,17 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   `InMemoryGlassmindStore` implementation (`src/inMemoryStore.ts`) that enforces
   provenance as a hard gate: any write whose `sourceReference` has every field
   empty throws `InvalidSourceReferenceError`.
+- Three lifecycle methods — `resolveFollowUp`, `resolveDeferredDecision`,
+  `updateApprovalWaitingState` — that mutate an existing record's status and
+  attach resolution/update metadata (`LifecycleResolution`/`LifecycleUpdate`
+  in `src/types.ts`). They never touch a record's original `sourceReference`;
+  they require and validate their own resolution/update source reference
+  (also enforced via `InvalidSourceReferenceError`) and reject an unknown id
+  via `RecordNotFoundError` rather than silently creating a new record.
+  `FollowUpMemoryRecord`/`DeferredDecisionMemoryRecord`'s old `resolvedAt?`
+  field was replaced by a structured `resolution?: LifecycleResolution`
+  field; `ApprovalWaitingStateMemoryRecord`'s old `resolvedAt?` field was
+  replaced by `update?: LifecycleUpdate`.
 
 ## What this is not (yet)
 
@@ -24,6 +35,12 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   A persistent implementation of the same `GlassmindStore` interface is a
   separate, later task; the storage technology is deliberately unselected
   per `Sprint-10-Implementation-Plan.md` §4.
+- Not authoritative for current operational state — the lifecycle methods
+  update Glassmind's own remembered copy of a follow-up/decision/approval's
+  status. They never call out to anything outside this package, and in
+  particular never write back into CommandCore. Once a real Approval Engine
+  exists, CommandCore's live state remains the source of truth; Glassmind
+  only remembers what it was told.
 
 ## Why this lives under `apps/`
 

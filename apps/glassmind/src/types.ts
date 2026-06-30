@@ -87,6 +87,33 @@ export type ConversationTurnRecord = RetrievalMetadata & {
   sourceReference: SourceReference;
 };
 
+/**
+ * Lifecycle metadata recorded when a follow-up or deferred decision is
+ * resolved. `resolutionSourceReference` is deliberately a separate field
+ * from the record's original `sourceReference` — a lifecycle update never
+ * overwrites the provenance of why the record was first created; it adds
+ * provenance for why/how it was resolved, alongside the original.
+ */
+export type LifecycleResolution = {
+  resolvedAt: string;
+  resolvedBy: string;
+  resolutionSourceReference: SourceReference;
+  resolutionNote?: string;
+};
+
+/**
+ * Update metadata recorded when an approval waiting-state record's status
+ * changes. Approvals use "update" rather than "resolution" vocabulary
+ * because a waiting-state record may change status more than once (for
+ * example awaiting -> deferred -> approved) rather than reaching one final
+ * resolution the way a follow-up or decision does.
+ */
+export type LifecycleUpdate = {
+  updatedAt: string;
+  updateSourceReference: SourceReference;
+  resolutionNote?: string;
+};
+
 export type FollowUpKind = "question" | "waiting" | "postponed" | "review";
 export type FollowUpStatus = "open" | "resolved" | "deferred" | "expired";
 
@@ -98,7 +125,7 @@ export type FollowUpMemoryRecord = RetrievalMetadata & {
   status: FollowUpStatus;
   evidence?: EvidenceLink;
   sourceReference: SourceReference;
-  resolvedAt?: string;
+  resolution?: LifecycleResolution;
 };
 
 export type DeferredDecisionStatus = "waiting" | "deferred" | "completed" | "info";
@@ -111,7 +138,7 @@ export type DeferredDecisionMemoryRecord = RetrievalMetadata & {
   status: DeferredDecisionStatus;
   evidence?: EvidenceLink;
   sourceReference: SourceReference;
-  resolvedAt?: string;
+  resolution?: LifecycleResolution;
 };
 
 export type ApprovalWaitingStatus = "awaiting" | "approved" | "deferred" | "rejected";
@@ -130,7 +157,7 @@ export type ApprovalWaitingStateMemoryRecord = RetrievalMetadata & {
   status: ApprovalWaitingStatus;
   evidence?: EvidenceLink;
   sourceReference: SourceReference;
-  resolvedAt?: string;
+  update?: LifecycleUpdate;
 };
 
 export type GlassmindMemoryRecord =
@@ -138,3 +165,26 @@ export type GlassmindMemoryRecord =
   | FollowUpMemoryRecord
   | DeferredDecisionMemoryRecord
   | ApprovalWaitingStateMemoryRecord;
+
+export type ResolveFollowUpInput = {
+  status: FollowUpStatus;
+  resolvedAt: string;
+  resolvedBy: string;
+  resolutionSourceReference: SourceReference;
+  resolutionNote?: string;
+};
+
+export type ResolveDeferredDecisionInput = {
+  status: DeferredDecisionStatus;
+  resolvedAt: string;
+  resolvedBy: string;
+  resolutionSourceReference: SourceReference;
+  resolutionNote?: string;
+};
+
+export type UpdateApprovalWaitingStateInput = {
+  status: ApprovalWaitingStatus;
+  updatedAt: string;
+  updateSourceReference: SourceReference;
+  resolutionNote?: string;
+};

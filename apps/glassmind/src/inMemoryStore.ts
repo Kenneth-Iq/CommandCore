@@ -1,4 +1,4 @@
-import { assertValidSourceReference } from "./errors.js";
+import { assertValidSourceReference, RecordNotFoundError } from "./errors.js";
 import type { GlassmindStore } from "./store.js";
 import type {
   ApprovalWaitingStateMemoryRecord,
@@ -7,7 +7,10 @@ import type {
   FollowUpMemoryRecord,
   GlassmindMemoryRecord,
   RecordScope,
+  ResolveDeferredDecisionInput,
+  ResolveFollowUpInput,
   SourceReference,
+  UpdateApprovalWaitingStateInput,
 } from "./types.js";
 
 function matchesSourceReference(record: GlassmindMemoryRecord, sourceReference: SourceReference): boolean {
@@ -75,5 +78,77 @@ export class InMemoryGlassmindStore implements GlassmindStore {
 
   retrieveByScope(scope: RecordScope): GlassmindMemoryRecord[] {
     return this.allRecords().filter((record) => matchesScope(record, scope));
+  }
+
+  resolveFollowUp(id: string, input: ResolveFollowUpInput): FollowUpMemoryRecord {
+    assertValidSourceReference(input.resolutionSourceReference, "follow_up_resolution");
+
+    const index = this.followUps.findIndex((record) => record.id === id);
+    if (index === -1) {
+      throw new RecordNotFoundError("follow_up", id);
+    }
+
+    const existing = this.followUps[index];
+    const updated: FollowUpMemoryRecord = {
+      ...existing,
+      // sourceReference is never reassigned here — only resolution metadata is added.
+      sourceReference: existing.sourceReference,
+      status: input.status,
+      resolution: {
+        resolvedAt: input.resolvedAt,
+        resolvedBy: input.resolvedBy,
+        resolutionSourceReference: input.resolutionSourceReference,
+        resolutionNote: input.resolutionNote,
+      },
+    };
+    this.followUps[index] = updated;
+    return updated;
+  }
+
+  resolveDeferredDecision(id: string, input: ResolveDeferredDecisionInput): DeferredDecisionMemoryRecord {
+    assertValidSourceReference(input.resolutionSourceReference, "deferred_decision_resolution");
+
+    const index = this.deferredDecisions.findIndex((record) => record.id === id);
+    if (index === -1) {
+      throw new RecordNotFoundError("deferred_decision", id);
+    }
+
+    const existing = this.deferredDecisions[index];
+    const updated: DeferredDecisionMemoryRecord = {
+      ...existing,
+      sourceReference: existing.sourceReference,
+      status: input.status,
+      resolution: {
+        resolvedAt: input.resolvedAt,
+        resolvedBy: input.resolvedBy,
+        resolutionSourceReference: input.resolutionSourceReference,
+        resolutionNote: input.resolutionNote,
+      },
+    };
+    this.deferredDecisions[index] = updated;
+    return updated;
+  }
+
+  updateApprovalWaitingState(id: string, input: UpdateApprovalWaitingStateInput): ApprovalWaitingStateMemoryRecord {
+    assertValidSourceReference(input.updateSourceReference, "approval_waiting_state_update");
+
+    const index = this.approvalWaitingStates.findIndex((record) => record.id === id);
+    if (index === -1) {
+      throw new RecordNotFoundError("approval_waiting_state", id);
+    }
+
+    const existing = this.approvalWaitingStates[index];
+    const updated: ApprovalWaitingStateMemoryRecord = {
+      ...existing,
+      sourceReference: existing.sourceReference,
+      status: input.status,
+      update: {
+        updatedAt: input.updatedAt,
+        updateSourceReference: input.updateSourceReference,
+        resolutionNote: input.resolutionNote,
+      },
+    };
+    this.approvalWaitingStates[index] = updated;
+    return updated;
   }
 }

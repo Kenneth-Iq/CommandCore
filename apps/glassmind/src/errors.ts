@@ -30,3 +30,17 @@ export function assertValidSourceReference(sourceReference: SourceReference, rec
     throw new InvalidSourceReferenceError(recordKind);
   }
 }
+
+/**
+ * Thrown when a lifecycle method (resolveFollowUp, resolveDeferredDecision,
+ * updateApprovalWaitingState) is called with an id that does not match any
+ * record currently held by the store. Lifecycle methods mutate an existing
+ * memory record; there is no "upsert" — an unknown id is always rejected
+ * cleanly rather than silently creating a new record.
+ */
+export class RecordNotFoundError extends Error {
+  constructor(recordKind: string, id: string) {
+    super(`No ${recordKind} record found with id "${id}". Lifecycle methods only update existing records.`);
+    this.name = "RecordNotFoundError";
+  }
+}
