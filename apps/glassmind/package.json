@@ -1,0 +1,15 @@
+{
+  "name": "@commandcore/glassmind",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Glassmind Phase 1 memory/retrieval type contracts and in-memory store skeleton. Backend-safe, framework-free, not connected to the Nexus frontend or to CommandCore's kernel yet. See docs/architecture/Glassmind-Phase-1-Storage-Design.md.",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.9"
+  }
+}
