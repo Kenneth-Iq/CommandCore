@@ -21,3 +21,12 @@ export { classifyIntent } from "./intentClassifier.js";
 export type { JarvisIntent, JarvisIntentKind } from "./intentClassifier.js";
 
 export { DeterministicJarvisConversationEngine } from "./engine.js";
+
+export { GlassmindReadOnlyMemoryAdapter } from "./glassmindReadAdapter.js";
+export type {
+  GlassmindLikeEvidence,
+  GlassmindLikeMemoryRecord,
+  GlassmindLikeScope,
+  GlassmindLikeSourceReference,
+  GlassmindLikeStore,
+} from "./glassmindReadAdapter.js";

@@ -26,6 +26,15 @@ see `docs/architecture/Jarvis-Conversation-Engine-Boundary.md`.
   spirit, but declared independently rather than depending on
   `apps/glassmind` directly, for the same decoupling reason
   `apps/glassmind` declares its own `EvidenceLink` independently of Nexus's.
+- `GlassmindReadOnlyMemoryAdapter` (`src/glassmindReadAdapter.ts`) — a
+  read-only `JarvisMemoryStore` implementation over a `GlassmindLikeStore`
+  (a minimal, independently-declared interface structurally compatible with
+  `@commandcore/glassmind`'s `GlassmindStore`, without an actual package
+  dependency — TypeScript's structural typing means a real `GlassmindStore`
+  or `DurableGlassmindStore` instance satisfies it automatically). This
+  class has exactly one method, `retrieve`, and no write method of any kind
+  — Jarvis can ask Glassmind for memory through it; it can never write to
+  Glassmind through it.
 
 ## Honesty guarantees
 
@@ -45,9 +54,12 @@ see `docs/architecture/Jarvis-Conversation-Engine-Boundary.md`.
 - Not connected to a real LLM — `DeterministicJarvisConversationEngine` is
   the only implementation, and it is deterministic keyword matching, the
   same boundary `conversationOrchestrator.ts` already operates inside.
-- Not connected to `apps/glassmind` — `JarvisMemoryStore` is a narrow,
-  independently-declared interface; wiring a real `GlassmindStore` behind it
-  is later, separate integration work.
+- Not connected to a *real, durable* `apps/glassmind` store — the read-only
+  `GlassmindReadOnlyMemoryAdapter` exists and can wrap any object satisfying
+  `GlassmindLikeStore`'s two read methods, including a real
+  `InMemoryGlassmindStore`/`DurableGlassmindStore` instance, but no process
+  in this repo wires the two packages together yet. No npm dependency
+  between the two packages exists or is required for this adapter to work.
 - Not connected to the Nexus frontend (`apps/nexus-console`) — no import in
   either direction. This package does not replace
   `conversationOrchestrator.ts`'s frontend simulation; it defines the

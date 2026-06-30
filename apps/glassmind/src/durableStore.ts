@@ -1,4 +1,5 @@
 import { assertValidSourceReference, GlassmindPersistenceNotConfiguredError, RecordNotFoundError } from "./errors.js";
+import { matchesScope, matchesSourceReference } from "./recordMatchers.js";
 import type { GlassmindStore } from "./store.js";
 import type {
   ApprovalWaitingStateMemoryRecord,
@@ -168,5 +169,74 @@ export class DurableGlassmindStore implements GlassmindStore {
       },
     };
     return driver.updateRecord(updated) as ApprovalWaitingStateMemoryRecord;
+  }
+}
+
+/**
+ * Concrete, fully-functioning in-memory implementation of
+ * GlassmindPersistenceDriver — the first real "persistent adapter" per
+ * docs/architecture/Glassmind-Durable-Adapter-Design.md, deliberately not
+ * connected to a real database yet (per that document's own phasing). This
+ * is intentionally a dumb, business-logic-free CRUD store: no provenance
+ * checks, no id-not-found rejection — those stay in DurableGlassmindStore,
+ * exactly as a real SQL/document-database driver would have no opinion
+ * about Glassmind's business rules either. This separation is what makes
+ * contract-parity testing against InMemoryGlassmindStore meaningful (see
+ * glassmindStoreParity.test.ts): DurableGlassmindStore plus this driver
+ * should behave identically to InMemoryGlassmindStore's single combined
+ * class, proving the architecture's split between rules and storage holds.
+ *
+ * Stores records grouped by kind, mirroring InMemoryGlassmindStore's four
+ * separate arrays, and reuses the exact same matching logic via
+ * recordMatchers.ts so the two implementations cannot silently drift apart.
+ */
+export class InMemoryGlassmindPersistenceDriver implements GlassmindPersistenceDriver {
+  private readonly recordsByKind: Record<GlassmindMemoryRecord["kind"], GlassmindMemoryRecord[]> = {
+    conversation_turn: [],
+    follow_up: [],
+    deferred_decision: [],
+    approval_waiting_state: [],
+  };
+
+  insertRecord(record: GlassmindMemoryRecord): GlassmindMemoryRecord {
+    this.recordsByKind[record.kind].push(record);
+    return record;
+  }
+
+  updateRecord(record: GlassmindMemoryRecord): GlassmindMemoryRecord {
+    const list = this.recordsByKind[record.kind];
+    const index = list.findIndex((existing) => existing.id === record.id);
+    if (index === -1) {
+      // DurableGlassmindStore always calls findById and rejects an unknown id
+      // before ever reaching updateRecord, so this path should not be
+      // reachable in practice — appending defensively rather than throwing
+      // keeps this driver free of the business-rule opinions that belong
+      // one layer up.
+      list.push(record);
+    } else {
+      list[index] = record;
+    }
+    return record;
+  }
+
+  findById(kind: GlassmindMemoryRecord["kind"], id: string): GlassmindMemoryRecord | undefined {
+    return this.recordsByKind[kind].find((record) => record.id === id);
+  }
+
+  findBySourceReference(sourceReference: SourceReference): GlassmindMemoryRecord[] {
+    return this.allRecords().filter((record) => matchesSourceReference(record, sourceReference));
+  }
+
+  findByScope(scope: RecordScope): GlassmindMemoryRecord[] {
+    return this.allRecords().filter((record) => matchesScope(record, scope));
+  }
+
+  private allRecords(): GlassmindMemoryRecord[] {
+    return [
+      ...this.recordsByKind.conversation_turn,
+      ...this.recordsByKind.follow_up,
+      ...this.recordsByKind.deferred_decision,
+      ...this.recordsByKind.approval_waiting_state,
+    ];
   }
 }

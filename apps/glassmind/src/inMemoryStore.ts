@@ -1,4 +1,5 @@
 import { assertValidSourceReference, RecordNotFoundError } from "./errors.js";
+import { matchesScope, matchesSourceReference } from "./recordMatchers.js";
 import type { GlassmindStore } from "./store.js";
 import type {
   ApprovalWaitingStateMemoryRecord,
@@ -12,19 +13,6 @@ import type {
   SourceReference,
   UpdateApprovalWaitingStateInput,
 } from "./types.js";
-
-function matchesSourceReference(record: GlassmindMemoryRecord, sourceReference: SourceReference): boolean {
-  return (
-    (sourceReference.conversationId !== undefined && record.sourceReference.conversationId === sourceReference.conversationId) ||
-    (sourceReference.messageId !== undefined && record.sourceReference.messageId === sourceReference.messageId) ||
-    (sourceReference.recommendationId !== undefined && record.sourceReference.recommendationId === sourceReference.recommendationId) ||
-    (sourceReference.eventId !== undefined && record.sourceReference.eventId === sourceReference.eventId)
-  );
-}
-
-function matchesScope(record: GlassmindMemoryRecord, scope: RecordScope): boolean {
-  return record.scope.entityKind === scope.entityKind && record.scope.entityId === scope.entityId;
-}
 
 /**
  * Development/testing-only in-memory implementation of GlassmindStore.

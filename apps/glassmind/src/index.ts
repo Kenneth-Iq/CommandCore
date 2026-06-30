@@ -32,7 +32,7 @@ export {
   assertValidSourceReference,
 } from "./errors.js";
 
-export { DurableGlassmindStore } from "./durableStore.js";
+export { DurableGlassmindStore, InMemoryGlassmindPersistenceDriver } from "./durableStore.js";
 export type { GlassmindPersistenceDriver } from "./durableStore.js";
 
 export { EventStoreIngestionAdapter } from "./eventStoreIngestion.js";
@@ -43,3 +43,13 @@ export type {
   IngestionResult,
   IngestionSkipReason,
 } from "./eventStoreIngestion.js";
+
+export { DefaultCommandCoreEventBridge } from "./commandCoreEventBridge.js";
+export type {
+  CommandCoreBridgeResult,
+  CommandCoreBridgeSkipReason,
+  CommandCoreEventBridge,
+  CommandCoreEventEligibility,
+  CommandCoreEventEnvelope,
+  CommandCoreEventReference,
+} from "./commandCoreEventBridge.js";

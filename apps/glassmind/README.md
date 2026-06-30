@@ -38,16 +38,36 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   to any real EventStore — no subscription loop, no default eligibility (so
   nothing is ingested unless the caller explicitly opts an event in). Never
   copies `event.payload` into a produced record.
+- A **concrete** persistence driver, `InMemoryGlassmindPersistenceDriver`
+  (`src/durableStore.ts`), implementing `GlassmindPersistenceDriver` as a
+  dumb, business-logic-free CRUD store (no provenance checks — those stay in
+  `DurableGlassmindStore`). Still not a real database; this is the first real
+  realization of the driver interface, proving the architecture's split
+  between rules and storage holds. `src/glassmindStoreParity.test.ts` runs
+  the same contract scenarios against `InMemoryGlassmindStore` and
+  `DurableGlassmindStore` + `InMemoryGlassmindPersistenceDriver` together,
+  per `docs/architecture/Glassmind-Durable-Adapter-Design.md` §14's
+  contract-parity requirement.
+- A CommandCore EventStore bridge **skeleton**, `DefaultCommandCoreEventBridge`
+  (`src/commandCoreEventBridge.ts`), converting a structurally-typed
+  `CommandCoreEventEnvelope` (not imported from `core/`) into the
+  `GlassmindIngestionEvent` shape `EventStoreIngestionAdapter` already
+  consumes. Conversion only — no subscription, no polling, no write back
+  toward CommandCore. Data flow stays one-directional: CommandCore/EventStore
+  → Glassmind.
 
 ## What this is not (yet)
 
 - Not connected to the Nexus frontend (`apps/nexus-console`) — no import in
   either direction.
-- Not connected to CommandCore's kernel (`core/`) — no ingestion path is
-  modeled in this skeleton. A real ingestion implementation (reading from the
-  CommandCore EventStore) is later work per `Glassmind-Ingestion.md`.
-- Not durable — `InMemoryGlassmindStore` loses everything on process exit.
-  A persistent implementation of the same `GlassmindStore` interface is a
+- Not connected to CommandCore's kernel (`core/`) — no import of `core/`
+  exists anywhere in this package (verified by a dedicated test in
+  `commandCoreEventBridge.test.ts`), and nothing subscribes
+  `EventStoreIngestionAdapter`/`DefaultCommandCoreEventBridge` to a real
+  EventStore. Both are conversion/ingestion skeletons only.
+- Not durable in production — `InMemoryGlassmindStore` and
+  `InMemoryGlassmindPersistenceDriver` both lose everything on process exit.
+  A real database-backed `GlassmindPersistenceDriver` implementation is a
   separate, later task; the storage technology is deliberately unselected
   per `Sprint-10-Implementation-Plan.md` §4.
 - Not authoritative for current operational state — the lifecycle methods
