@@ -35,6 +35,9 @@ export {
 export { DurableGlassmindStore, InMemoryGlassmindPersistenceDriver } from "./durableStore.js";
 export type { GlassmindPersistenceDriver } from "./durableStore.js";
 
+export { DatabaseGlassmindPersistenceDriver } from "./databaseDriver.js";
+export type { DatabaseClient } from "./databaseDriver.js";
+
 export { EventStoreIngestionAdapter } from "./eventStoreIngestion.js";
 export type {
   GlassmindIngestionEvent,

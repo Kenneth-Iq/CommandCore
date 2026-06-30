@@ -55,6 +55,20 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   consumes. Conversion only — no subscription, no polling, no write back
   toward CommandCore. Data flow stays one-directional: CommandCore/EventStore
   → Glassmind.
+- A database-backed persistence driver **skeleton**, `DatabaseGlassmindPersistenceDriver`
+  (`src/databaseDriver.ts`), adapting an injected `DatabaseClient`
+  (`insert`/`update`/`findById`/`findBySourceReference`/`findByScope`) to the
+  existing `GlassmindPersistenceDriver` contract. Pure delegation only — no
+  provenance checks, no business logic, no enrichment of any record; those
+  stay in `DurableGlassmindStore`, exactly as for `InMemoryGlassmindPersistenceDriver`.
+  Ships with **no concrete `DatabaseClient` implementation** and **no real
+  database connection** — tests use a fake client only, per
+  `docs/architecture/Glassmind-Persistence-Runtime-Decision.md` and
+  `docs/architecture/Glassmind-Schema-Migration-Plan.md`, which defer the
+  actual database technology choice. `glassmindStoreParity.test.ts`'s
+  contract-parity suite includes this driver (behind a fake client) as a
+  third implementation, alongside `InMemoryGlassmindStore` and
+  `InMemoryGlassmindPersistenceDriver`.
 
 ## What this is not (yet)
 
@@ -67,9 +81,10 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   EventStore. Both are conversion/ingestion skeletons only.
 - Not durable in production — `InMemoryGlassmindStore` and
   `InMemoryGlassmindPersistenceDriver` both lose everything on process exit.
-  A real database-backed `GlassmindPersistenceDriver` implementation is a
-  separate, later task; the storage technology is deliberately unselected
-  per `Sprint-10-Implementation-Plan.md` §4.
+  `DatabaseGlassmindPersistenceDriver` exists but has no real `DatabaseClient`
+  implementation behind it; the storage technology and runtime owner remain
+  deliberately undecided per `docs/architecture/Glassmind-Database-Adapter-Decision.md`
+  and `docs/architecture/Glassmind-Persistence-Runtime-Decision.md`.
 - Not authoritative for current operational state — the lifecycle methods
   update Glassmind's own remembered copy of a follow-up/decision/approval's
   status. They never call out to anything outside this package, and in

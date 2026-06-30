@@ -1,13 +1,71 @@
 import { describe, expect, it } from "vitest";
+import type { DatabaseClient } from "./databaseDriver.js";
+import { DatabaseGlassmindPersistenceDriver } from "./databaseDriver.js";
 import { DurableGlassmindStore, InMemoryGlassmindPersistenceDriver } from "./durableStore.js";
 import { InvalidSourceReferenceError, RecordNotFoundError } from "./errors.js";
 import { InMemoryGlassmindStore } from "./inMemoryStore.js";
+import { matchesScope, matchesSourceReference } from "./recordMatchers.js";
 import type { GlassmindStore } from "./store.js";
 import type {
   ApprovalWaitingStateMemoryRecord,
   DeferredDecisionMemoryRecord,
   FollowUpMemoryRecord,
+  GlassmindMemoryRecord,
+  RecordScope,
+  SourceReference,
 } from "./types.js";
+
+/**
+ * Minimal fake DatabaseClient for the third contract-parity entry below —
+ * intentionally a separate, simpler fake than databaseDriver.test.ts's
+ * FakeDatabaseClient (which tracks call counts for delegation assertions);
+ * this one only needs to behave like a real, dumb, business-logic-free store.
+ */
+class FakeDatabaseClient implements DatabaseClient {
+  private readonly recordsByKind: Record<GlassmindMemoryRecord["kind"], GlassmindMemoryRecord[]> = {
+    conversation_turn: [],
+    follow_up: [],
+    deferred_decision: [],
+    approval_waiting_state: [],
+  };
+
+  insert(record: GlassmindMemoryRecord): GlassmindMemoryRecord {
+    this.recordsByKind[record.kind].push(record);
+    return record;
+  }
+
+  update(record: GlassmindMemoryRecord): GlassmindMemoryRecord {
+    const list = this.recordsByKind[record.kind];
+    const index = list.findIndex((existing) => existing.id === record.id);
+    if (index === -1) {
+      list.push(record);
+    } else {
+      list[index] = record;
+    }
+    return record;
+  }
+
+  findById(kind: GlassmindMemoryRecord["kind"], id: string): GlassmindMemoryRecord | undefined {
+    return this.recordsByKind[kind].find((record) => record.id === id);
+  }
+
+  findBySourceReference(sourceReference: SourceReference): GlassmindMemoryRecord[] {
+    return this.allRecords().filter((record) => matchesSourceReference(record, sourceReference));
+  }
+
+  findByScope(scope: RecordScope): GlassmindMemoryRecord[] {
+    return this.allRecords().filter((record) => matchesScope(record, scope));
+  }
+
+  private allRecords(): GlassmindMemoryRecord[] {
+    return [
+      ...this.recordsByKind.conversation_turn,
+      ...this.recordsByKind.follow_up,
+      ...this.recordsByKind.deferred_decision,
+      ...this.recordsByKind.approval_waiting_state,
+    ];
+  }
+}
 
 /**
  * Contract-parity suite: every scenario here runs identically against
@@ -70,6 +128,10 @@ const implementations: Array<{ label: string; createStore: () => GlassmindStore 
   {
     label: "DurableGlassmindStore + InMemoryGlassmindPersistenceDriver",
     createStore: () => new DurableGlassmindStore(new InMemoryGlassmindPersistenceDriver()),
+  },
+  {
+    label: "DurableGlassmindStore + DatabaseGlassmindPersistenceDriver (fake client)",
+    createStore: () => new DurableGlassmindStore(new DatabaseGlassmindPersistenceDriver(new FakeDatabaseClient())),
   },
 ];
 
