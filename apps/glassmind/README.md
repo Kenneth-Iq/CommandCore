@@ -90,6 +90,15 @@ Glassmind Phase 1 type contracts and an in-memory store skeleton, implementing
   every test is fully isolated with no cleanup step. `glassmindStoreParity.test.ts`'s
   contract-parity suite includes this driver as a fourth implementation.
   See "Running the SQLite-backed tests locally" below.
+- A Jarvis-read **dev/test harness**, `src/jarvisSqliteReadHarness.test.ts`,
+  proving the full chain — fake `CommandCoreEventEnvelope` through
+  `SafeIngestionPath` into a real, SQLite-backed `DurableGlassmindStore` —
+  is then readable by a Jarvis-shaped consumer. Does not import
+  `apps/jarvis-engine` (the two packages have no shared workspace tooling
+  and incompatible `tsconfig.json` `rootDir` settings); instead it mirrors
+  `apps/jarvis-engine`'s real `retrieveMemory`/`GlassmindReadOnlyMemoryAdapter`
+  contract locally, per the same "declare structurally independent rather
+  than cross-package import" precedent used throughout this repo.
 
 ## What this is not (yet)
 
