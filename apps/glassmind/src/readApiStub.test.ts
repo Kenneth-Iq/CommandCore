@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { DurableGlassmindStore } from "./durableStore.js";
+import { EventStoreIngestionAdapter, type GlassmindIngestionEvent } from "./eventStoreIngestion.js";
 import { InMemoryGlassmindStore } from "./inMemoryStore.js";
 import { GlassmindReadApiStub } from "./readApiStub.js";
-import type { ConversationTurnRecord, DeferredDecisionMemoryRecord, FollowUpMemoryRecord } from "./types.js";
+import type { ConversationTurnRecord, DeferredDecisionMemoryRecord, FollowUpMemoryRecord, RecordScope, SourceReference } from "./types.js";
 
 function buildFollowUp(overrides: Partial<FollowUpMemoryRecord> = {}): FollowUpMemoryRecord {
   return {
@@ -130,6 +131,24 @@ describe("GlassmindReadApiStub — readTrace", () => {
 
     expect(response).toEqual({ status: "no_memory_found" });
   });
+
+  it("orders stably (preserves insertion order) when two records share the exact same occurredAt", () => {
+    const store = new InMemoryGlassmindStore();
+    const sharedTimestamp = "2026-06-30T03:00:00.000Z";
+    store.recordFollowUp(buildFollowUp({ id: "followup-tied", occurredAt: sharedTimestamp }));
+    store.recordDeferredDecision(buildDeferredDecision({ id: "decision-tied", occurredAt: sharedTimestamp }));
+    const stub = new GlassmindReadApiStub(store);
+
+    const response = stub.readTrace({ entityKind: "mission", entityId: "m-1" });
+
+    expect(response.status).toBe("found");
+    if (response.status === "found") {
+      // Both records share the same occurredAt; a stable sort must preserve
+      // the order they were retrieved in (insertion order here), not
+      // reorder them arbitrarily.
+      expect(response.records.map((entry) => entry.record.id)).toEqual(["followup-tied", "decision-tied"]);
+    }
+  });
 });
 
 describe("GlassmindReadApiStub — readiness", () => {
@@ -175,11 +194,64 @@ describe("GlassmindReadApiStub — backend_unavailable", () => {
   });
 });
 
-describe("GlassmindReadApiStub — no write methods exist", () => {
-  it("exposes only the four read/readiness methods — no write/ingest/update/resolve method of any kind", () => {
+const WRITE_SHAPED_PREFIXES = ["write", "insert", "create", "delete", "remove", "ingest", "update", "resolve"];
+
+describe("GlassmindReadApiStub — no write, ingest, update, resolve, or delete method exists", () => {
+  it("exposes exactly the four read/readiness methods and nothing else", () => {
     const prototypeMethods = Object.getOwnPropertyNames(GlassmindReadApiStub.prototype).filter((name) => name !== "constructor");
 
     expect(prototypeMethods.sort()).toEqual(["readByScope", "readBySourceReference", "readTrace", "readiness"]);
+  });
+
+  it("has no method whose name matches any write/ingest/update/resolve/delete-shaped prefix", () => {
+    const prototypeMethods = Object.getOwnPropertyNames(GlassmindReadApiStub.prototype).filter((name) => name !== "constructor");
+
+    for (const method of prototypeMethods) {
+      const lower = method.toLowerCase();
+      expect(WRITE_SHAPED_PREFIXES.some((prefix) => lower.startsWith(prefix))).toBe(false);
+    }
+  });
+});
+
+describe("GlassmindReadApiStub — response records do not include raw EventStore payloads", () => {
+  it("never surfaces ingested event.payload content through readBySourceReference, readByScope, or readTrace", () => {
+    const store = new InMemoryGlassmindStore();
+    const adapter = new EventStoreIngestionAdapter(
+      store,
+      () => true,
+      (event: GlassmindIngestionEvent, sourceReference: SourceReference, scope: RecordScope): FollowUpMemoryRecord => ({
+        kind: "follow_up",
+        id: `followup-from-${event.id}`,
+        followUpKind: "review",
+        text: `Event ${event.type} needs review.`,
+        status: "open",
+        sourceReference,
+        scope,
+        occurredAt: event.timestamp,
+        confidence: 55,
+      }),
+    );
+    adapter.ingest({
+      id: "evt-1",
+      type: "MissionBlocked",
+      timestamp: "2026-06-30T04:00:00.000Z",
+      scope: { entityKind: "mission", entityId: "m-1" },
+      conversationId: "conv-1",
+      payload: { internalDebugInfo: { secretToken: "do-not-leak-this-token" } },
+    });
+
+    const stub = new GlassmindReadApiStub(store);
+
+    const bySourceReference = stub.readBySourceReference({ conversationId: "conv-1" });
+    const byScope = stub.readByScope({ entityKind: "mission", entityId: "m-1" });
+    const trace = stub.readTrace({ entityKind: "mission", entityId: "m-1" });
+
+    for (const response of [bySourceReference, byScope, trace]) {
+      const serialized = JSON.stringify(response);
+      expect(serialized).not.toContain("secretToken");
+      expect(serialized).not.toContain("do-not-leak-this-token");
+      expect(serialized).not.toContain("payload");
+    }
   });
 });
 
